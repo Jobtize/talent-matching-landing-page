@@ -1,0 +1,5 @@
+reviews:
+  enabled: true
+  review_status: true
+  trigger: on_pull_request
+  re_review_on_push: true
