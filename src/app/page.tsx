@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
   TrendingUp, 
@@ -106,7 +107,23 @@ export default function TalentMatchLanding() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
                 Comece sua jornada agora
               </h2>
-              <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
+              <ClientOnly fallback={
+                <div className="space-y-4">
+                  <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                    <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                  </div>
+                  <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                    <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                  </div>
+                  <div className="h-20 bg-gray-100 rounded-md animate-pulse"></div>
+                  <div className="h-12 bg-blue-100 rounded-md animate-pulse"></div>
+                </div>
+              }>
+                <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="relative">
                   <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                   <Input
@@ -117,7 +134,6 @@ export default function TalentMatchLanding() {
                     onChange={handleInputChange}
                     className="pl-10"
                     required
-                    suppressHydrationWarning
                   />
                 </div>
 
@@ -132,7 +148,6 @@ export default function TalentMatchLanding() {
                       onChange={handleInputChange}
                       className="pl-10"
                       required
-                      suppressHydrationWarning
                     />
                   </div>
                   <div className="relative">
@@ -145,7 +160,6 @@ export default function TalentMatchLanding() {
                       onChange={handleInputChange}
                       className="pl-10"
                       required
-                      suppressHydrationWarning
                     />
                   </div>
                 </div>
@@ -205,6 +219,7 @@ export default function TalentMatchLanding() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </form>
+              </ClientOnly>
             </div>
           </div>
         </div>
