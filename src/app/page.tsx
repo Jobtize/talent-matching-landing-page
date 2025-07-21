@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
   TrendingUp, 
@@ -11,7 +12,10 @@ import {
   Mail,
   Phone,
   MapPin,
-  User
+  User,
+  Code2,
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
 
 interface FormData {
@@ -22,6 +26,7 @@ interface FormData {
   experiencia: string
   localizacao: string
   areas: string
+  tecnologias: string
 }
 
 export default function TalentMatchLanding() {
@@ -32,10 +37,15 @@ export default function TalentMatchLanding() {
     cargo: '',
     experiencia: '',
     localizacao: '',
-    areas: ''
+    areas: '',
+    tecnologias: ''
   })
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [submitMessage, setSubmitMessage] = useState('')
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -43,11 +53,63 @@ export default function TalentMatchLanding() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Dados do formulário:', formData)
-    // Aqui você integraria com sua API
-    alert('Cadastro realizado com sucesso! Entraremos em contato em breve.')
+    
+    if (isSubmitting) return
+    
+    setIsSubmitting(true)
+    setSubmitStatus('idle')
+    setSubmitMessage('')
+    
+    try {
+      const response = await fetch('/api/candidates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        setSubmitStatus('success')
+        setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
+        
+        // Reset do formulário após sucesso
+        setFormData({
+          nome: '',
+          email: '',
+          telefone: '',
+          cargo: '',
+          experiencia: '',
+          localizacao: '',
+          areas: '',
+          tecnologias: ''
+        })
+      } else {
+        setSubmitStatus('error')
+        
+        // Mensagens específicas para diferentes tipos de erro
+        switch (result.code) {
+          case 'EMAIL_ALREADY_EXISTS':
+            setSubmitMessage('Este email já está cadastrado. Tente com outro email ou entre em contato conosco.')
+            break
+          case 'DATABASE_CONNECTION_ERROR':
+            setSubmitMessage('Erro de conexão. Verifique sua internet e tente novamente.')
+            break
+          default:
+            setSubmitMessage(result.error || 'Erro ao processar cadastro. Tente novamente.')
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao enviar formulário:', error)
+      setSubmitStatus('error')
+      setSubmitMessage('Erro de conexão. Verifique sua internet e tente novamente.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -106,7 +168,24 @@ export default function TalentMatchLanding() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
                 Comece sua jornada agora
               </h2>
-              <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
+              <ClientOnly fallback={
+                <div className="space-y-4">
+                  <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                    <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                  </div>
+                  <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                    <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
+                  </div>
+                  <div className="h-20 bg-gray-100 rounded-md animate-pulse"></div>
+                  <div className="h-20 bg-gray-100 rounded-md animate-pulse"></div>
+                  <div className="h-12 bg-blue-100 rounded-md animate-pulse"></div>
+                </div>
+              }>
+                <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="relative">
                   <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                   <Input
@@ -117,7 +196,6 @@ export default function TalentMatchLanding() {
                     onChange={handleInputChange}
                     className="pl-10"
                     required
-                    suppressHydrationWarning
                   />
                 </div>
 
@@ -132,7 +210,6 @@ export default function TalentMatchLanding() {
                       onChange={handleInputChange}
                       className="pl-10"
                       required
-                      suppressHydrationWarning
                     />
                   </div>
                   <div className="relative">
@@ -145,7 +222,6 @@ export default function TalentMatchLanding() {
                       onChange={handleInputChange}
                       className="pl-10"
                       required
-                      suppressHydrationWarning
                     />
                   </div>
                 </div>
@@ -200,11 +276,70 @@ export default function TalentMatchLanding() {
                   required
                 />
 
-                <Button type="submit" className="w-full text-lg py-3">
-                  Encontrar Oportunidades
-                  <ArrowRight className="ml-2 w-5 h-5" />
+                <div className="relative">
+                  <Code2 className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <textarea
+                    name="tecnologias"
+                    placeholder="Tecnologias e ferramentas prioritárias (ex: React, Python, AWS, Figma, etc.)"
+                    value={formData.tecnologias}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                  />
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full text-lg py-3" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 w-5 h-5 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      Encontrar Oportunidades
+                      <ArrowRight className="ml-2 w-5 h-5" />
+                    </>
+                  )}
                 </Button>
+
+                {/* Feedback Visual */}
+                {submitStatus === 'success' && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                      <div>
+                        <h3 className="text-sm font-medium text-green-800">
+                          Cadastro realizado com sucesso!
+                        </h3>
+                        <p className="text-sm text-green-700 mt-1">
+                          {submitMessage}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {submitStatus === 'error' && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                      <div>
+                        <h3 className="text-sm font-medium text-red-800">
+                          Erro no cadastro
+                        </h3>
+                        <p className="text-sm text-red-700 mt-1">
+                          {submitMessage}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </form>
+              </ClientOnly>
             </div>
           </div>
         </div>
