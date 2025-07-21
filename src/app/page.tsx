@@ -106,7 +106,7 @@ export default function TalentMatchLanding() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
                 Comece sua jornada agora
               </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
                 <div className="relative">
                   <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                   <Input
@@ -117,6 +117,7 @@ export default function TalentMatchLanding() {
                     onChange={handleInputChange}
                     className="pl-10"
                     required
+                    suppressHydrationWarning
                   />
                 </div>
 
@@ -131,6 +132,7 @@ export default function TalentMatchLanding() {
                       onChange={handleInputChange}
                       className="pl-10"
                       required
+                      suppressHydrationWarning
                     />
                   </div>
                   <div className="relative">
@@ -143,6 +145,7 @@ export default function TalentMatchLanding() {
                       onChange={handleInputChange}
                       className="pl-10"
                       required
+                      suppressHydrationWarning
                     />
                   </div>
                 </div>
