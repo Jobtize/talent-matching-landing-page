@@ -12,7 +12,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  User
+  User,
+  Code2
 } from 'lucide-react'
 
 interface FormData {
@@ -23,6 +24,7 @@ interface FormData {
   experiencia: string
   localizacao: string
   areas: string
+  tecnologias: string
 }
 
 export default function TalentMatchLanding() {
@@ -33,10 +35,11 @@ export default function TalentMatchLanding() {
     cargo: '',
     experiencia: '',
     localizacao: '',
-    areas: ''
+    areas: '',
+    tecnologias: ''
   })
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -119,6 +122,7 @@ export default function TalentMatchLanding() {
                     <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
                     <div className="h-10 bg-gray-100 rounded-md animate-pulse"></div>
                   </div>
+                  <div className="h-20 bg-gray-100 rounded-md animate-pulse"></div>
                   <div className="h-20 bg-gray-100 rounded-md animate-pulse"></div>
                   <div className="h-12 bg-blue-100 rounded-md animate-pulse"></div>
                 </div>
@@ -213,6 +217,18 @@ export default function TalentMatchLanding() {
                   onChange={handleInputChange}
                   required
                 />
+
+                <div className="relative">
+                  <Code2 className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <textarea
+                    name="tecnologias"
+                    placeholder="Tecnologias e ferramentas prioritárias (ex: React, Python, AWS, Figma, etc.)"
+                    value={formData.tecnologias}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                  />
+                </div>
 
                 <Button type="submit" className="w-full text-lg py-3">
                   Encontrar Oportunidades
