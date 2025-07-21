@@ -13,7 +13,9 @@ import {
   Phone,
   MapPin,
   User,
-  Code2
+  Code2,
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
 
 interface FormData {
@@ -39,6 +41,10 @@ export default function TalentMatchLanding() {
     tecnologias: ''
   })
 
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [submitMessage, setSubmitMessage] = useState('')
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -47,11 +53,63 @@ export default function TalentMatchLanding() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Dados do formulário:', formData)
-    // Aqui você integraria com sua API
-    alert('Cadastro realizado com sucesso! Entraremos em contato em breve.')
+    
+    if (isSubmitting) return
+    
+    setIsSubmitting(true)
+    setSubmitStatus('idle')
+    setSubmitMessage('')
+    
+    try {
+      const response = await fetch('/api/candidates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        setSubmitStatus('success')
+        setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
+        
+        // Reset do formulário após sucesso
+        setFormData({
+          nome: '',
+          email: '',
+          telefone: '',
+          cargo: '',
+          experiencia: '',
+          localizacao: '',
+          areas: '',
+          tecnologias: ''
+        })
+      } else {
+        setSubmitStatus('error')
+        
+        // Mensagens específicas para diferentes tipos de erro
+        switch (result.code) {
+          case 'EMAIL_ALREADY_EXISTS':
+            setSubmitMessage('Este email já está cadastrado. Tente com outro email ou entre em contato conosco.')
+            break
+          case 'DATABASE_CONNECTION_ERROR':
+            setSubmitMessage('Erro de conexão. Verifique sua internet e tente novamente.')
+            break
+          default:
+            setSubmitMessage(result.error || 'Erro ao processar cadastro. Tente novamente.')
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao enviar formulário:', error)
+      setSubmitStatus('error')
+      setSubmitMessage('Erro de conexão. Verifique sua internet e tente novamente.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -230,10 +288,56 @@ export default function TalentMatchLanding() {
                   />
                 </div>
 
-                <Button type="submit" className="w-full text-lg py-3">
-                  Encontrar Oportunidades
-                  <ArrowRight className="ml-2 w-5 h-5" />
+                <Button 
+                  type="submit" 
+                  className="w-full text-lg py-3" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 w-5 h-5 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      Encontrar Oportunidades
+                      <ArrowRight className="ml-2 w-5 h-5" />
+                    </>
+                  )}
                 </Button>
+
+                {/* Feedback Visual */}
+                {submitStatus === 'success' && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                      <div>
+                        <h3 className="text-sm font-medium text-green-800">
+                          Cadastro realizado com sucesso!
+                        </h3>
+                        <p className="text-sm text-green-700 mt-1">
+                          {submitMessage}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {submitStatus === 'error' && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                      <div>
+                        <h3 className="text-sm font-medium text-red-800">
+                          Erro no cadastro
+                        </h3>
+                        <p className="text-sm text-red-700 mt-1">
+                          {submitMessage}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </form>
               </ClientOnly>
             </div>
