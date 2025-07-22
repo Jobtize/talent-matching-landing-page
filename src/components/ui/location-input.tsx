@@ -19,9 +19,44 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     const [isLoading, setIsLoading] = React.useState(false)
     const inputRef = React.useRef<HTMLInputElement>(null)
 
-    // Simulação de busca de endereços (pode ser substituído por API real)
+    // Base de dados de cidades brasileiras (simulação mais realista)
+    const brazilianCities = React.useMemo(() => [
+      // Capitais
+      'São Paulo - SP', 'Rio de Janeiro - RJ', 'Belo Horizonte - MG', 'Salvador - BA',
+      'Fortaleza - CE', 'Brasília - DF', 'Curitiba - PR', 'Recife - PE', 'Porto Alegre - RS',
+      'Manaus - AM', 'Belém - PA', 'Goiânia - GO', 'Guarulhos - SP', 'Campinas - SP',
+      'São Luís - MA', 'São Gonçalo - RJ', 'Maceió - AL', 'Duque de Caxias - RJ',
+      'Natal - RN', 'Teresina - PI', 'Campo Grande - MS', 'Nova Iguaçu - RJ',
+      'São Bernardo do Campo - SP', 'João Pessoa - PB', 'Santo André - SP',
+      
+      // Cidades do interior populares
+      'Ribeirão Preto - SP', 'Sorocaba - SP', 'Santos - SP', 'Osasco - SP',
+      'São José dos Campos - SP', 'Jundiaí - SP', 'Piracicaba - SP', 'Bauru - SP',
+      'Franca - SP', 'Limeira - SP', 'Suzano - SP', 'Taubaté - SP', 'Carapicuíba - SP',
+      'Volta Redonda - RJ', 'Magé - RJ', 'Itaboraí - RJ', 'Nova Friburgo - RJ',
+      'Barra Mansa - RJ', 'Angra dos Reis - RJ', 'Resende - RJ',
+      'Juiz de Fora - MG', 'Uberlândia - MG', 'Contagem - MG', 'Montes Claros - MG',
+      'Betim - MG', 'Uberaba - MG', 'Governador Valadares - MG', 'Ipatinga - MG',
+      'Londrina - PR', 'Maringá - PR', 'Ponta Grossa - PR', 'Cascavel - PR',
+      'São José dos Pinhais - PR', 'Foz do Iguaçu - PR', 'Colombo - PR',
+      'Caxias do Sul - RS', 'Pelotas - RS', 'Canoas - RS', 'Santa Maria - RS',
+      'Gravataí - RS', 'Viamão - RS', 'Novo Hamburgo - RS', 'São Leopoldo - RS',
+      'Joinville - SC', 'Florianópolis - SC', 'Blumenau - SC', 'São José - SC',
+      'Criciúma - SC', 'Chapecó - SC', 'Itajaí - SC', 'Jaraguá do Sul - SC',
+      'Feira de Santana - BA', 'Vitória da Conquista - BA', 'Camaçari - BA',
+      'Itabuna - BA', 'Juazeiro - BA', 'Lauro de Freitas - BA', 'Ilhéus - BA',
+      'Jequié - BA', 'Teixeira de Freitas - BA', 'Alagoinhas - BA',
+      'Caucaia - CE', 'Juazeiro do Norte - CE', 'Maracanaú - CE', 'Sobral - CE',
+      'Crato - CE', 'Itapipoca - CE', 'Maranguape - CE', 'Iguatu - CE',
+      'Jaboatão dos Guararapes - PE', 'Olinda - PE', 'Caruaru - PE', 'Petrolina - PE',
+      'Paulista - PE', 'Cabo de Santo Agostinho - PE', 'Camaragibe - PE',
+      'Aparecida de Goiânia - GO', 'Anápolis - GO', 'Rio Verde - GO', 'Luziânia - GO',
+      'Águas Lindas de Goiás - GO', 'Valparaíso de Goiás - GO', 'Trindade - GO'
+    ], [])
+
+    // Simulação de busca de endereços mais realista
     const searchLocations = React.useCallback(async (query: string) => {
-      if (query.length < 3) {
+      if (query.length < 2) {
         setSuggestions([])
         return
       }
@@ -31,20 +66,25 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       // Simulação de delay de API
       await new Promise(resolve => setTimeout(resolve, 300))
       
-      // Sugestões simuladas baseadas no input
-      const mockSuggestions = [
-        `${query}, São Paulo - SP, Brasil`,
-        `${query}, Rio de Janeiro - RJ, Brasil`,
-        `${query}, Belo Horizonte - MG, Brasil`,
-        `${query}, Brasília - DF, Brasil`,
-        `${query}, Salvador - BA, Brasil`,
-      ].filter(suggestion => 
-        suggestion.toLowerCase().includes(query.toLowerCase())
+      // Busca inteligente baseada no input do usuário
+      const filteredCities = brazilianCities.filter(city => 
+        city.toLowerCase().includes(query.toLowerCase())
       )
 
-      setSuggestions(mockSuggestions.slice(0, 5))
+      // Se não encontrou nenhuma cidade, sugere algumas opções genéricas
+      const suggestions = filteredCities.length > 0 
+        ? filteredCities.slice(0, 8)
+        : [
+            `${query} - SP, Brasil`,
+            `${query} - RJ, Brasil`,
+            `${query} - MG, Brasil`,
+            `${query} - PR, Brasil`,
+            `${query} - RS, Brasil`
+          ]
+
+      setSuggestions(suggestions)
       setIsLoading(false)
-    }, [])
+    }, [brazilianCities])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
@@ -54,14 +94,23 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     }
 
     const handleSuggestionClick = (suggestion: string) => {
+      console.log('Suggestion clicked:', suggestion) // Debug
       setInputValue(suggestion)
-      onChange(suggestion)
       setShowSuggestions(false)
       setSuggestions([])
+      
+      // Chama onChange após um pequeno delay para garantir que o estado foi atualizado
+      setTimeout(() => {
+        onChange(suggestion)
+        console.log('onChange called with:', suggestion) // Debug
+      }, 0)
+      
       // Foca no input após seleção
-      if (inputRef.current) {
-        inputRef.current.focus()
-      }
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus()
+        }
+      }, 100)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -112,15 +161,17 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
         {showSuggestions && suggestions.length > 0 && (
           <div className="absolute z-10 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-48 overflow-y-auto">
             {suggestions.map((suggestion, index) => (
-              <button
+              <div
                 key={index}
-                type="button"
-                onClick={() => handleSuggestionClick(suggestion)}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2"
+                onMouseDown={(e) => {
+                  e.preventDefault() // Previne o blur do input
+                  handleSuggestionClick(suggestion)
+                }}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <MapPin className="w-4 h-4 text-gray-400" />
                 {suggestion}
-              </button>
+              </div>
             ))}
           </div>
         )}
