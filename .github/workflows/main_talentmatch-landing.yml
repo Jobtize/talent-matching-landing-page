@@ -23,6 +23,9 @@ jobs:
         with:
           node-version: '22.x'
 
+
+      - name: Update npm to latest version
+        run: npm install -g npm@latest
       - name: npm install, build, and test
         run: |
           npm install
