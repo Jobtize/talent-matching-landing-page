@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PhoneInput } from '@/components/ui/phone-input'
+import { LocationInput } from '@/components/ui/location-input'
+import { TagInput } from '@/components/ui/tag-input'
 import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
@@ -11,7 +14,6 @@ import {
   ArrowRight,
   Mail,
   Phone,
-  MapPin,
   User,
   Code2,
   Loader2,
@@ -26,7 +28,7 @@ interface FormData {
   experiencia: string
   localizacao: string
   areas: string
-  tecnologias: string
+  tecnologias: string[]
 }
 
 export default function TalentMatchLanding() {
@@ -38,7 +40,7 @@ export default function TalentMatchLanding() {
     experiencia: '',
     localizacao: '',
     areas: '',
-    tecnologias: ''
+    tecnologias: []
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -50,6 +52,20 @@ export default function TalentMatchLanding() {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }))
+  }
+
+  const handleLocationChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      localizacao: value
+    }))
+  }
+
+  const handleTecnologiasChange = (tags: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      tecnologias: tags
     }))
   }
 
@@ -68,7 +84,10 @@ export default function TalentMatchLanding() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          tecnologias: formData.tecnologias.join(', ')
+        }),
       })
       
       const result = await response.json()
@@ -86,7 +105,7 @@ export default function TalentMatchLanding() {
           experiencia: '',
           localizacao: '',
           areas: '',
-          tecnologias: ''
+          tecnologias: []
         })
       } else {
         setSubmitStatus('error')
@@ -214,8 +233,7 @@ export default function TalentMatchLanding() {
                   </div>
                   <div className="relative">
                     <Phone className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                    <Input
-                      type="tel"
+                    <PhoneInput
                       name="telefone"
                       placeholder="Telefone"
                       value={formData.telefone}
@@ -253,18 +271,12 @@ export default function TalentMatchLanding() {
                     <option value="senior">Sênior (6+ anos)</option>
                   </select>
 
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                    <Input
-                      type="text"
-                      name="localizacao"
-                      placeholder="Localização"
-                      value={formData.localizacao}
-                      onChange={handleInputChange}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
+                  <LocationInput
+                    value={formData.localizacao}
+                    onChange={handleLocationChange}
+                    placeholder="Localização"
+                    className="w-full"
+                  />
                 </div>
 
                 <Input
@@ -277,14 +289,12 @@ export default function TalentMatchLanding() {
                 />
 
                 <div className="relative">
-                  <Code2 className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                  <textarea
-                    name="tecnologias"
-                    placeholder="Tecnologias e ferramentas prioritárias (ex: React, Python, AWS, Figma, etc.)"
+                  <Code2 className="absolute left-3 top-3 w-5 h-5 text-gray-400 z-10" />
+                  <TagInput
                     value={formData.tecnologias}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                    onChange={handleTecnologiasChange}
+                    placeholder="Tecnologias e ferramentas prioritárias (ex: React, Python, AWS, Figma, etc.)"
+                    className="pl-10"
                   />
                 </div>
 
