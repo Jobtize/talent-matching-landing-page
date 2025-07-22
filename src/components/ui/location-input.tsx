@@ -58,6 +58,10 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       onChange(suggestion)
       setShowSuggestions(false)
       setSuggestions([])
+      // Foca no input após seleção
+      if (inputRef.current) {
+        inputRef.current.focus()
+      }
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -74,7 +78,10 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       // Delay para permitir clique nas sugestões
       setTimeout(() => {
         setShowSuggestions(false)
-        onChange(inputValue)
+        // Só atualiza se o valor mudou
+        if (inputValue !== value) {
+          onChange(inputValue)
+        }
       }, 200)
     }
 
@@ -125,4 +132,3 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 LocationInput.displayName = "LocationInput"
 
 export { LocationInput }
-

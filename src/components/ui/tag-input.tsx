@@ -53,22 +53,30 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === ",") {
+      if (e.key === "Enter") {
         e.preventDefault()
         if (inputValue.trim()) {
-          addTag(inputValue)
+          addTag(inputValue.trim())
+        }
+      } else if (e.key === ",") {
+        e.preventDefault()
+        if (inputValue.trim()) {
+          addTag(inputValue.trim())
         }
       } else if (e.key === "Backspace" && !inputValue && value.length > 0) {
         removeTag(value.length - 1)
       } else if (e.key === "Escape") {
         setShowSuggestions(false)
+        if (inputRef.current) {
+          inputRef.current.blur()
+        }
       }
     }
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
       setInputValue(newValue)
-      setShowSuggestions(newValue.length > 0)
+      setShowSuggestions(newValue.length > 0 && filteredSuggestions.length > 0)
     }
 
     return (
@@ -116,7 +124,13 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
               <button
                 key={index}
                 type="button"
-                onClick={() => addTag(suggestion)}
+                onClick={() => {
+                  addTag(suggestion)
+                  // Foca no input após adicionar tag
+                  if (inputRef.current) {
+                    inputRef.current.focus()
+                  }
+                }}
                 className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 {suggestion}

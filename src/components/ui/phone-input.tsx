@@ -9,35 +9,56 @@ export interface PhoneInputProps
 }
 
 const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
-  ({ className, onChange, ...props }, ref) => {
-    const formatPhoneNumber = (value: string) => {
+  ({ className, onChange, value, ...props }, ref) => {
+    const formatPhoneNumber = (inputValue: string) => {
       // Remove todos os caracteres não numéricos
-      const numbers = value.replace(/\D/g, '')
+      const numbers = inputValue.replace(/\D/g, '')
+      
+      // Limita a 11 dígitos (DDD + 9 dígitos)
+      const limitedNumbers = numbers.slice(0, 11)
       
       // Aplica a máscara (99) 99999-9999
-      if (numbers.length <= 2) {
-        return numbers
-      } else if (numbers.length <= 7) {
-        return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`
+      if (limitedNumbers.length <= 2) {
+        return limitedNumbers
+      } else if (limitedNumbers.length <= 7) {
+        return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2)}`
       } else {
-        return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`
+        return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 7)}-${limitedNumbers.slice(7)}`
       }
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const formatted = formatPhoneNumber(e.target.value)
+      const rawValue = e.target.value
+      const formatted = formatPhoneNumber(rawValue)
       
       // Cria um novo evento com o valor formatado
-      const newEvent = {
+      const syntheticEvent = {
         ...e,
         target: {
           ...e.target,
-          value: formatted
+          value: formatted,
+          name: props.name || ''
         }
-      }
+      } as React.ChangeEvent<HTMLInputElement>
       
       if (onChange) {
-        onChange(newEvent as React.ChangeEvent<HTMLInputElement>)
+        onChange(syntheticEvent)
+      }
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Permite: backspace, delete, tab, escape, enter, home, end, left, right
+      if ([8, 9, 27, 13, 46, 35, 36, 37, 39].indexOf(e.keyCode) !== -1 ||
+          // Permite Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+          (e.keyCode === 65 && e.ctrlKey === true) ||
+          (e.keyCode === 67 && e.ctrlKey === true) ||
+          (e.keyCode === 86 && e.ctrlKey === true) ||
+          (e.keyCode === 88 && e.ctrlKey === true)) {
+        return
+      }
+      // Permite apenas números (0-9)
+      if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+        e.preventDefault()
       }
     }
 
@@ -45,7 +66,9 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
       <input
         {...props}
         ref={ref}
+        value={value}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
         maxLength={15} // (99) 99999-9999
         className={cn(
           "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
