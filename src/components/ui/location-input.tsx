@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from "react"
-import { MapPin, Loader2 } from "lucide-react"
+import { MapPin, Loader2, Navigation, Map } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Loader } from "@googlemaps/js-api-loader"
 
 export interface LocationInputProps {
   value: string
@@ -11,50 +12,67 @@ export interface LocationInputProps {
   className?: string
 }
 
+interface PlacePrediction {
+  description: string
+  place_id: string
+  structured_formatting: {
+    main_text: string
+    secondary_text: string
+  }
+}
+
 const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
   ({ value, onChange, placeholder, className }, ref) => {
     const [inputValue, setInputValue] = React.useState(value)
-    const [suggestions, setSuggestions] = React.useState<string[]>([])
+    const [suggestions, setSuggestions] = React.useState<PlacePrediction[]>([])
     const [showSuggestions, setShowSuggestions] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState(false)
+    const [showMap, setShowMap] = React.useState(false)
+    const [selectedLocation, setSelectedLocation] = React.useState<{lat: number, lng: number} | null>(null)
+    const [googleMapsLoaded, setGoogleMapsLoaded] = React.useState(false)
+    
     const inputRef = React.useRef<HTMLInputElement>(null)
+    const mapRef = React.useRef<HTMLDivElement>(null)
+    const autocompleteService = React.useRef<google.maps.places.AutocompleteService | null>(null)
+    const placesService = React.useRef<google.maps.places.PlacesService | null>(null)
+    const mapInstance = React.useRef<google.maps.Map | null>(null)
 
-    // Base de dados de cidades brasileiras (simulação mais realista)
-    const brazilianCities = React.useMemo(() => [
-      // Capitais
-      'São Paulo - SP', 'Rio de Janeiro - RJ', 'Belo Horizonte - MG', 'Salvador - BA',
-      'Fortaleza - CE', 'Brasília - DF', 'Curitiba - PR', 'Recife - PE', 'Porto Alegre - RS',
-      'Manaus - AM', 'Belém - PA', 'Goiânia - GO', 'Guarulhos - SP', 'Campinas - SP',
-      'São Luís - MA', 'São Gonçalo - RJ', 'Maceió - AL', 'Duque de Caxias - RJ',
-      'Natal - RN', 'Teresina - PI', 'Campo Grande - MS', 'Nova Iguaçu - RJ',
-      'São Bernardo do Campo - SP', 'João Pessoa - PB', 'Santo André - SP',
-      
-      // Cidades do interior populares
-      'Ribeirão Preto - SP', 'Sorocaba - SP', 'Santos - SP', 'Osasco - SP',
-      'São José dos Campos - SP', 'Jundiaí - SP', 'Piracicaba - SP', 'Bauru - SP',
-      'Franca - SP', 'Limeira - SP', 'Suzano - SP', 'Taubaté - SP', 'Carapicuíba - SP',
-      'Volta Redonda - RJ', 'Magé - RJ', 'Itaboraí - RJ', 'Nova Friburgo - RJ',
-      'Barra Mansa - RJ', 'Angra dos Reis - RJ', 'Resende - RJ',
-      'Juiz de Fora - MG', 'Uberlândia - MG', 'Contagem - MG', 'Montes Claros - MG',
-      'Betim - MG', 'Uberaba - MG', 'Governador Valadares - MG', 'Ipatinga - MG',
-      'Londrina - PR', 'Maringá - PR', 'Ponta Grossa - PR', 'Cascavel - PR',
-      'São José dos Pinhais - PR', 'Foz do Iguaçu - PR', 'Colombo - PR',
-      'Caxias do Sul - RS', 'Pelotas - RS', 'Canoas - RS', 'Santa Maria - RS',
-      'Gravataí - RS', 'Viamão - RS', 'Novo Hamburgo - RS', 'São Leopoldo - RS',
-      'Joinville - SC', 'Florianópolis - SC', 'Blumenau - SC', 'São José - SC',
-      'Criciúma - SC', 'Chapecó - SC', 'Itajaí - SC', 'Jaraguá do Sul - SC',
-      'Feira de Santana - BA', 'Vitória da Conquista - BA', 'Camaçari - BA',
-      'Itabuna - BA', 'Juazeiro - BA', 'Lauro de Freitas - BA', 'Ilhéus - BA',
-      'Jequié - BA', 'Teixeira de Freitas - BA', 'Alagoinhas - BA',
-      'Caucaia - CE', 'Juazeiro do Norte - CE', 'Maracanaú - CE', 'Sobral - CE',
-      'Crato - CE', 'Itapipoca - CE', 'Maranguape - CE', 'Iguatu - CE',
-      'Jaboatão dos Guararapes - PE', 'Olinda - PE', 'Caruaru - PE', 'Petrolina - PE',
-      'Paulista - PE', 'Cabo de Santo Agostinho - PE', 'Camaragibe - PE',
-      'Aparecida de Goiânia - GO', 'Anápolis - GO', 'Rio Verde - GO', 'Luziânia - GO',
-      'Águas Lindas de Goiás - GO', 'Valparaíso de Goiás - GO', 'Trindade - GO'
-    ], [])
+    // Inicializar Google Maps
+    React.useEffect(() => {
+      const initGoogleMaps = async () => {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        
+        if (!apiKey) {
+          console.warn('Google Maps API key not found. Using fallback mode.')
+          return
+        }
 
-    // Simulação de busca de endereços mais realista
+        try {
+          const loader = new Loader({
+            apiKey,
+            version: "weekly",
+            libraries: ["places", "geometry"]
+          })
+
+          await loader.load()
+          
+          // Inicializar serviços
+          autocompleteService.current = new google.maps.places.AutocompleteService()
+          
+          // Criar um div temporário para o PlacesService
+          const tempDiv = document.createElement('div')
+          placesService.current = new google.maps.places.PlacesService(tempDiv)
+          
+          setGoogleMapsLoaded(true)
+        } catch (error) {
+          console.error('Error loading Google Maps:', error)
+        }
+      }
+
+      initGoogleMaps()
+    }, [])
+
+    // Busca de localizações usando Google Places API
     const searchLocations = React.useCallback(async (query: string) => {
       if (query.length < 2) {
         setSuggestions([])
@@ -62,29 +80,35 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       }
 
       setIsLoading(true)
-      
-      // Simulação de delay de API
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      // Busca inteligente baseada no input do usuário
-      const filteredCities = brazilianCities.filter(city => 
-        city.toLowerCase().includes(query.toLowerCase())
-      )
 
-      // Se não encontrou nenhuma cidade, sugere algumas opções genéricas
-      const suggestions = filteredCities.length > 0 
-        ? filteredCities.slice(0, 8)
-        : [
-            `${query} - SP, Brasil`,
-            `${query} - RJ, Brasil`,
-            `${query} - MG, Brasil`,
-            `${query} - PR, Brasil`,
-            `${query} - RS, Brasil`
-          ]
+      if (googleMapsLoaded && autocompleteService.current) {
+        try {
+          const request = {
+            input: query,
+            componentRestrictions: { country: 'br' }, // Restringir ao Brasil
+            types: ['(cities)'] // Focar em cidades
+          }
 
-      setSuggestions(suggestions)
-      setIsLoading(false)
-    }, [brazilianCities])
+          autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+              setSuggestions(predictions.slice(0, 8))
+            } else {
+              setSuggestions([])
+            }
+            setIsLoading(false)
+          })
+        } catch (error) {
+          console.error('Error fetching places:', error)
+          setSuggestions([])
+          setIsLoading(false)
+        }
+      } else {
+        // Fallback para quando Google Maps não está disponível
+        await new Promise(resolve => setTimeout(resolve, 300))
+        setSuggestions([])
+        setIsLoading(false)
+      }
+    }, [googleMapsLoaded])
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
@@ -93,17 +117,44 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       searchLocations(newValue)
     }
 
-    const handleSuggestionClick = (suggestion: string) => {
-      console.log('Suggestion clicked:', suggestion) // Debug
-      setInputValue(suggestion)
+    const handleSuggestionClick = (suggestion: PlacePrediction) => {
+      const selectedText = suggestion.description
+      setInputValue(selectedText)
       setShowSuggestions(false)
       setSuggestions([])
       
-      // Chama onChange após um pequeno delay para garantir que o estado foi atualizado
-      setTimeout(() => {
-        onChange(suggestion)
-        console.log('onChange called with:', suggestion) // Debug
-      }, 0)
+      // Obter coordenadas do local selecionado
+      if (googleMapsLoaded && placesService.current) {
+        const request = {
+          placeId: suggestion.place_id,
+          fields: ['geometry', 'formatted_address']
+        }
+        
+        placesService.current.getDetails(request, (place, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+            const location = {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng()
+            }
+            setSelectedLocation(location)
+            
+            // Inicializar mapa se ainda não foi criado
+            if (mapRef.current && !mapInstance.current) {
+              initializeMap(location)
+            } else if (mapInstance.current) {
+              // Atualizar mapa existente
+              mapInstance.current.setCenter(location)
+              new google.maps.Marker({
+                position: location,
+                map: mapInstance.current,
+                title: selectedText
+              })
+            }
+          }
+        })
+      }
+      
+      onChange(selectedText)
       
       // Foca no input após seleção
       setTimeout(() => {
@@ -111,6 +162,80 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           inputRef.current.focus()
         }
       }, 100)
+    }
+
+    // Inicializar mapa
+    const initializeMap = (center: {lat: number, lng: number}) => {
+      if (!mapRef.current || !googleMapsLoaded) return
+
+      mapInstance.current = new google.maps.Map(mapRef.current, {
+        center,
+        zoom: 13,
+        styles: [
+          {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }]
+          }
+        ]
+      })
+
+      new google.maps.Marker({
+        position: center,
+        map: mapInstance.current,
+        title: inputValue
+      })
+    }
+
+    // Obter localização atual
+    const getCurrentLocation = () => {
+      if (!navigator.geolocation) {
+        alert('Geolocalização não é suportada pelo seu navegador')
+        return
+      }
+
+      setIsLoading(true)
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+          
+          setSelectedLocation(location)
+          
+          // Reverse geocoding para obter o endereço
+          if (googleMapsLoaded) {
+            const geocoder = new google.maps.Geocoder()
+            geocoder.geocode({ location }, (results, status) => {
+              if (status === 'OK' && results?.[0]) {
+                const address = results[0].formatted_address
+                setInputValue(address)
+                onChange(address)
+                
+                if (mapRef.current && !mapInstance.current) {
+                  initializeMap(location)
+                } else if (mapInstance.current) {
+                  mapInstance.current.setCenter(location)
+                  new google.maps.Marker({
+                    position: location,
+                    map: mapInstance.current,
+                    title: address
+                  })
+                }
+              }
+              setIsLoading(false)
+            })
+          } else {
+            setIsLoading(false)
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error)
+          alert('Erro ao obter localização')
+          setIsLoading(false)
+        }
+      )
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -151,28 +276,77 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             onFocus={() => setShowSuggestions(suggestions.length > 0)}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 pr-20 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           />
-          {isLoading && (
-            <Loader2 className="absolute right-3 top-3 w-4 h-4 animate-spin text-gray-400" />
-          )}
+          
+          <div className="absolute right-2 top-2 flex items-center gap-1">
+            {googleMapsLoaded && (
+              <>
+                <button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  disabled={isLoading}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Usar localização atual"
+                >
+                  <Navigation className="w-4 h-4" />
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setShowMap(!showMap)}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Mostrar/ocultar mapa"
+                >
+                  <Map className="w-4 h-4" />
+                </button>
+              </>
+            )}
+            
+            {isLoading && (
+              <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+            )}
+          </div>
         </div>
 
         {showSuggestions && suggestions.length > 0 && (
           <div className="absolute z-10 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-48 overflow-y-auto">
             {suggestions.map((suggestion, index) => (
               <div
-                key={index}
+                key={suggestion.place_id || index}
                 onMouseDown={(e) => {
-                  e.preventDefault() // Previne o blur do input
+                  e.preventDefault()
                   handleSuggestionClick(suggestion)
                 }}
                 className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <MapPin className="w-4 h-4 text-gray-400" />
-                {suggestion}
+                <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">
+                    {suggestion.structured_formatting.main_text}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {suggestion.structured_formatting.secondary_text}
+                  </div>
+                </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {showMap && selectedLocation && googleMapsLoaded && (
+          <div className="mt-2 border border-input rounded-md overflow-hidden">
+            <div 
+              ref={mapRef} 
+              className="w-full h-64"
+              style={{ minHeight: '256px' }}
+            />
+          </div>
+        )}
+
+        {!googleMapsLoaded && (
+          <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+            ⚠️ Para usar o autocomplete inteligente e o mapa, configure a chave da API do Google Maps.
           </div>
         )}
       </div>
