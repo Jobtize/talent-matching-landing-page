@@ -171,6 +171,11 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             }
             setSelectedLocation(location)
             
+            // Abrir mapa automaticamente se estiver em modo automático
+            if (autoShowMap) {
+              setShowMap(true)
+            }
+            
             // Inicializar mapa se ainda não foi criado
             if (mapRef.current && !mapInstance.current) {
               initializeMap(location)
@@ -216,12 +221,23 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             return
           }
           
-          // Limpar qualquer instância anterior
+          // Limpar qualquer instância anterior completamente
           if (mapInstance.current) {
             console.log('Clearing previous map instance')
+            try {
+              google.maps.event.clearInstanceListeners(mapInstance.current)
+            } catch (e) {
+              console.log('Error clearing map listeners:', e)
+            }
             mapInstance.current = null
           }
           
+          // Limpar o conteúdo do div do mapa
+          if (mapRef.current) {
+            mapRef.current.innerHTML = ''
+          }
+          
+          // Criar nova instância do mapa
           mapInstance.current = new google.maps.Map(mapRef.current, {
             center,
             zoom: selectedLocation ? 13 : 5, // Zoom menor se não há localização específica
@@ -263,7 +279,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               }
             }
           }, 3000)
-        }, 200) // Aumentei o timeout para 200ms
+        }, 300) // Aumentei o timeout para 300ms
         
       } catch (error) {
         console.error('Error initializing map:', error)
@@ -370,6 +386,11 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               setInputValue(address)
               onChange(address)
               
+              // Abrir mapa automaticamente se estiver em modo automático
+              if (autoShowMap) {
+                setShowMap(true)
+              }
+              
               if (mapRef.current && !mapInstance.current) {
                 initializeMap(location)
               } else if (mapInstance.current) {
@@ -388,6 +409,11 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               const address = 'Minha localização atual'
               setInputValue(address)
               onChange(address)
+              
+              // Abrir mapa automaticamente se estiver em modo automático
+              if (autoShowMap) {
+                setShowMap(true)
+              }
               
               if (mapRef.current && !mapInstance.current) {
                 initializeMap(location)
@@ -442,19 +468,26 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     // Controlar exibição automática do mapa baseado na localização
     React.useEffect(() => {
       if (autoShowMap) {
-        // Mostrar mapa se há localização ou valor no input
-        const hasLocation = selectedLocation || (inputValue && inputValue.trim() !== '')
+        // Mostrar mapa se há localização ou valor no input (mas não vazio)
+        const hasLocation = selectedLocation || (inputValue && inputValue.trim() !== '' && inputValue !== placeholder)
+        console.log('Auto map control:', { hasLocation, selectedLocation, inputValue, autoShowMap })
         setShowMap(hasLocation)
       }
-    }, [selectedLocation, inputValue, autoShowMap])
+    }, [selectedLocation, inputValue, autoShowMap, placeholder])
 
-    // Inicializar mapa quando showMap for true
+    // Inicializar/limpar mapa quando showMap muda
     React.useEffect(() => {
-      if (showMap && googleMapsLoaded && mapRef.current && !mapInstance.current) {
-        console.log('Initializing map from useEffect')
-        // Usar localização selecionada ou centro do Brasil como fallback
-        const defaultCenter = selectedLocation || { lat: -14.235, lng: -51.9253 }
-        initializeMap(defaultCenter)
+      if (showMap && googleMapsLoaded && mapRef.current) {
+        if (!mapInstance.current) {
+          console.log('Initializing map from useEffect')
+          // Usar localização selecionada ou centro do Brasil como fallback
+          const defaultCenter = selectedLocation || { lat: -14.235, lng: -51.9253 }
+          initializeMap(defaultCenter)
+        }
+      } else if (!showMap && mapInstance.current) {
+        // Limpar instância do mapa quando fechado
+        console.log('Clearing map instance')
+        mapInstance.current = null
       }
     }, [showMap, googleMapsLoaded, selectedLocation])
 
