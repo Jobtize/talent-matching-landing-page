@@ -125,8 +125,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             maxResultCount: 8
           }
 
-          // @ts-expect-error - Places API (New) ainda não tem tipos completos
-          const { places } = await Place.searchByText(request)
+          const { places } = await (Place as unknown as { searchByText: (request: unknown) => Promise<{ places: unknown[] }> }).searchByText(request)
 
           if (places && places.length > 0) {
             const formattedSuggestions = places.map((place: unknown, index: number) => {
@@ -195,14 +194,14 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             requestedLanguage: 'pt-BR'
           })
 
-          await (place as GooglePlace).fetchFields({
+          await (place as unknown as GooglePlace).fetchFields({
             fields: ['location', 'formattedAddress']
           })
 
-          if ((place as GooglePlace).location) {
+          if ((place as unknown as GooglePlace).location) {
             const location = {
-              lat: (place as GooglePlace).location!.lat(),
-              lng: (place as GooglePlace).location!.lng()
+              lat: (place as unknown as GooglePlace).location!.lat(),
+              lng: (place as unknown as GooglePlace).location!.lng()
             }
             setSelectedLocation(location)
             
@@ -245,7 +244,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     }
 
     // Função para adicionar novo marcador
-    const addMarker = (position: {lat: number, lng: number}, title: string) => {
+    const addMarker = React.useCallback((position: {lat: number, lng: number}, title: string) => {
       if (mapInstance.current) {
         clearPreviousMarker() // Limpar marcador anterior
         
@@ -256,10 +255,10 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
         })
         console.log('New marker added:', title)
       }
-    }
+    }, [])
 
     // Inicializar mapa
-    const initializeMap = (center: {lat: number, lng: number}) => {
+    const initializeMap = React.useCallback((center: {lat: number, lng: number}) => {
       if (!mapRef.current || !googleMapsLoaded || !window.google?.maps) {
         console.log('Map initialization failed - missing requirements')
         return
@@ -334,7 +333,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       } catch (error) {
         console.error('Error initializing map:', error)
       }
-    }
+    }, [googleMapsLoaded, addMarker, inputValue, selectedLocation])
 
     // Obter localização atual
     const getCurrentLocation = () => {
@@ -533,7 +532,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     React.useEffect(() => {
       if (autoShowMap) {
         // Mostrar mapa se há localização ou valor no input (mas não vazio)
-        const hasLocation = selectedLocation || (inputValue && inputValue.trim() !== '' && inputValue !== placeholder)
+        const hasLocation = Boolean(selectedLocation || (inputValue && inputValue.trim() !== '' && inputValue !== placeholder))
         console.log('Auto map control:', { hasLocation, selectedLocation, inputValue, autoShowMap })
         setShowMap(hasLocation)
       }
@@ -620,7 +619,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                       onClick={() => {
                         setAutoShowMap(true)
                         // Reativar comportamento automático
-                        const hasLocation = selectedLocation || (inputValue && inputValue.trim() !== '')
+                        const hasLocation = Boolean(selectedLocation || (inputValue && inputValue.trim() !== ''))
                         setShowMap(hasLocation)
                       }}
                       className="p-1 text-xs text-gray-400 hover:text-blue-600 transition-colors ml-1"
