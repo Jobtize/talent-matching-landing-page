@@ -76,6 +76,17 @@ export default function TalentMatchLanding() {
   const [existingUserData, setExistingUserData] = useState<ExistingUserData | null>(null)
   const [pendingFormData, setPendingFormData] = useState<PendingFormData | null>(null)
 
+  // Função para sanitizar texto e prevenir XSS
+  const sanitizeText = (text: string): string => {
+    if (!text) return ''
+    return text
+      .replace(/[<>]/g, '') // Remove < e >
+      .replace(/javascript:/gi, '') // Remove javascript:
+      .replace(/on\w+\s*[=:]/gi, '') // Remove event handlers como onclick=, onclick , onmouseover:
+      .trim()
+      .substring(0, 100) // Limita tamanho
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -501,19 +512,22 @@ export default function TalentMatchLanding() {
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <h4 className="text-sm font-medium text-gray-900 mb-2">Dados atuais:</h4>
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Nome:</strong> {existingUserData.nome}</p>
-                <p><strong>Email:</strong> {existingUserData.email}</p>
+                <p><strong>Nome:</strong> {sanitizeText(existingUserData.nome)}</p>
+                <p><strong>Email:</strong> {sanitizeText(existingUserData.email)}</p>
                 {existingUserData.telefone && (
-                  <p><strong>Telefone:</strong> {existingUserData.telefone}</p>
+                  <p><strong>Telefone:</strong> {sanitizeText(existingUserData.telefone)}</p>
                 )}
                 {existingUserData.cargo && (
-                  <p><strong>Cargo:</strong> {existingUserData.cargo}</p>
+                  <p><strong>Cargo:</strong> {sanitizeText(existingUserData.cargo)}</p>
                 )}
                 {existingUserData.experiencia && (
-                  <p><strong>Experiência:</strong> {existingUserData.experiencia}</p>
+                  <p><strong>Experiência:</strong> {sanitizeText(existingUserData.experiencia)}</p>
                 )}
                 {existingUserData.localizacao && (
-                  <p><strong>Localização:</strong> {existingUserData.localizacao}</p>
+                  <p><strong>Localização:</strong> {sanitizeText(existingUserData.localizacao)}</p>
+                )}
+                {existingUserData.areas && (
+                  <p><strong>Áreas:</strong> {sanitizeText(existingUserData.areas)}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-2">
                   Cadastrado em: {new Date(existingUserData.created_at).toLocaleDateString('pt-BR')}
