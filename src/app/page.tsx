@@ -90,6 +90,7 @@ export default function TalentMatchLanding() {
     
     try {
       // Preparar dados para envio (excluindo currículo por enquanto)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { curriculo, ...formDataWithoutFile } = formData
       const dataToSend = {
         ...formDataWithoutFile,
