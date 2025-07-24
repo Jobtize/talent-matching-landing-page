@@ -140,6 +140,20 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
       setInputValue(newValue)
+      onChange(newValue)
+      
+      // Se o campo foi limpo, resetar localização e fechar mapa automaticamente
+      if (newValue.trim() === '') {
+        console.log('Input cleared, resetting location and closing map')
+        setSelectedLocation(null)
+        if (autoShowMap) {
+          setShowMap(false)
+        }
+        setSuggestions([])
+        setShowSuggestions(false)
+        return
+      }
+      
       setShowSuggestions(true)
       searchLocations(newValue)
     }
@@ -329,14 +343,14 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 
               const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
               
-              // Buscar apenas bairro/região e cidade
+              // Buscar informações completas de localização
               const request = {
                 locationRestriction: {
                   center: location,
-                  radius: 1000 // 1km de raio para pegar bairro/cidade
+                  radius: 5000 // 5km de raio para pegar informações mais completas
                 },
-                includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1'],
-                maxResultCount: 3, // Pegar mais opções para escolher a melhor
+                includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1', 'country'],
+                maxResultCount: 10, // Pegar mais opções para montar endereço completo
                 fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
               }
 
@@ -352,32 +366,54 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               if (places && Array.isArray(places) && places.length > 0) {
                 console.log('Processing places results...')
                 
-                // Procurar por locality (cidade) e administrative areas
+                // Procurar por diferentes tipos de localização
                 const locality = places.find((place: any) => {
                   console.log('Checking place types:', place.types, 'for locality')
                   return place.types?.includes('locality')
+                })
+                const adminLevel1 = places.find((place: any) => {
+                  console.log('Checking place types:', place.types, 'for admin_level_1')
+                  return place.types?.includes('administrative_area_level_1')
                 })
                 const adminLevel2 = places.find((place: any) => {
                   console.log('Checking place types:', place.types, 'for admin_level_2')
                   return place.types?.includes('administrative_area_level_2')
                 })
+                const country = places.find((place: any) => {
+                  console.log('Checking place types:', place.types, 'for country')
+                  return place.types?.includes('country')
+                })
                 
                 console.log('Found locality:', locality?.displayName)
+                console.log('Found adminLevel1:', adminLevel1?.displayName)
                 console.log('Found adminLevel2:', adminLevel2?.displayName)
+                console.log('Found country:', country?.displayName)
+                
+                // Montar endereço no formato "Cidade, Estado, País"
+                const addressParts = []
                 
                 if (locality) {
-                  // Usar cidade
-                  address = locality.displayName
-                  console.log('Using locality:', address)
+                  addressParts.push(locality.displayName)
                 } else if (adminLevel2) {
-                  // Usar área administrativa (região)
-                  address = adminLevel2.displayName
-                  console.log('Using adminLevel2:', address)
+                  addressParts.push(adminLevel2.displayName)
+                }
+                
+                if (adminLevel1) {
+                  addressParts.push(adminLevel1.displayName)
+                }
+                
+                if (country) {
+                  addressParts.push(country.displayName)
+                }
+                
+                if (addressParts.length > 0) {
+                  address = addressParts.join(', ')
+                  console.log('Using formatted address:', address)
                 } else {
-                  // Usar o primeiro resultado disponível
+                  // Usar o primeiro resultado disponível como fallback
                   const firstPlace = places[0] as { formattedAddress?: string; displayName?: string; types?: string[] }
                   address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
-                  console.log('Using first place:', address, 'types:', firstPlace.types)
+                  console.log('Using first place fallback:', address, 'types:', firstPlace.types)
                 }
               } else {
                 console.log('No places found, using fallback')
