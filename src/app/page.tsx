@@ -90,7 +90,7 @@ export default function TalentMatchLanding() {
     
     try {
       // Preparar dados para envio (excluindo currículo por enquanto)
-      const { curriculo, ...formDataWithoutFile } = formData
+      const { curriculo: _, ...formDataWithoutFile } = formData
       const dataToSend = {
         ...formDataWithoutFile,
         telefone: formData.telefone.replace(/\D/g, ''), // Remove formatação do telefone

@@ -20,6 +20,27 @@ interface PlacePrediction {
   }
 }
 
+// Interfaces para tipos do Google Maps
+interface GooglePlace {
+  location?: {
+    lat: () => number
+    lng: () => number
+  }
+  formattedAddress?: string
+  fetchFields: (options: { fields: string[] }) => Promise<void>
+}
+
+interface GooglePlaceResult {
+  types?: string[]
+  displayName?: {
+    text?: string
+  }
+}
+
+interface SearchNearbyResult {
+  places?: GooglePlaceResult[]
+}
+
 const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
   ({ value, onChange, placeholder, className }, ref) => {
     const [inputValue, setInputValue] = React.useState(value)
@@ -174,14 +195,14 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             requestedLanguage: 'pt-BR'
           })
 
-          await (place as any).fetchFields({
+          await (place as GooglePlace).fetchFields({
             fields: ['location', 'formattedAddress']
           })
 
-          if ((place as any).location) {
+          if ((place as GooglePlace).location) {
             const location = {
-              lat: (place as any).location.lat(),
-              lng: (place as any).location.lng()
+              lat: (place as GooglePlace).location!.lat(),
+              lng: (place as GooglePlace).location!.lng()
             }
             setSelectedLocation(location)
             
@@ -302,7 +323,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                   console.log('Map loading timeout, forcing center')
                   mapInstance.current.setCenter(center)
                 }
-              } catch (e) {
+              } catch {
                 console.log('Error checking map center, forcing center')
                 mapInstance.current.setCenter(center)
               }
@@ -369,7 +390,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                 fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
               }
 
-              const result = await (Place as any).searchNearby(request)
+              const result = await (Place as unknown as { searchNearby: (request: unknown) => Promise<SearchNearbyResult> }).searchNearby(request)
               console.log('searchNearby result:', result)
               console.log('searchNearby result.places length:', result?.places?.length)
               console.log('searchNearby result details:', JSON.stringify(result, null, 2))
@@ -382,19 +403,19 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                 console.log('Processing places results...')
                 
                 // Procurar por diferentes tipos de localização
-                const locality = places.find((place: any) => {
+                const locality = places.find((place: GooglePlaceResult) => {
                   console.log('Checking place types:', place.types, 'for locality')
                   return place.types?.includes('locality')
                 })
-                const adminLevel1 = places.find((place: any) => {
+                const adminLevel1 = places.find((place: GooglePlaceResult) => {
                   console.log('Checking place types:', place.types, 'for admin_level_1')
                   return place.types?.includes('administrative_area_level_1')
                 })
-                const adminLevel2 = places.find((place: any) => {
+                const adminLevel2 = places.find((place: GooglePlaceResult) => {
                   console.log('Checking place types:', place.types, 'for admin_level_2')
                   return place.types?.includes('administrative_area_level_2')
                 })
-                const country = places.find((place: any) => {
+                const country = places.find((place: GooglePlaceResult) => {
                   console.log('Checking place types:', place.types, 'for country')
                   return place.types?.includes('country')
                 })
@@ -533,7 +554,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
         clearPreviousMarker() // Limpar marcador também
         mapInstance.current = null
       }
-    }, [showMap, googleMapsLoaded, selectedLocation])
+    }, [showMap, googleMapsLoaded, selectedLocation, initializeMap])
 
     return (
       <div ref={ref} className={cn("relative", className)}>
