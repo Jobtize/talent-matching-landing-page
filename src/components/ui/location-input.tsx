@@ -68,7 +68,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       initGoogleMaps()
     }, [])
 
-    // Busca de localizações usando Places API (New)
+    // Busca de localizações usando Places API (New) apenas
     const searchLocations = React.useCallback(async (query: string) => {
       if (query.length < 2) {
         setSuggestions([])
@@ -115,48 +115,11 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           setIsLoading(false)
         } catch (error) {
           console.error('Error with Places API (New):', error)
-          
-          // Fallback para autocomplete legacy se a nova API falhar
-          try {
-            const autocompleteService = new google.maps.places.AutocompleteService()
-            const request = {
-              input: query,
-              componentRestrictions: { country: 'br' },
-              types: ['(cities)']
-            }
-
-            const response = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve, reject) => {
-              autocompleteService.getPlacePredictions(request, (predictions, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-                  resolve(predictions)
-                } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-                  resolve([])
-                } else {
-                  reject(new Error(`Places API error: ${status}`))
-                }
-              })
-            })
-
-            const formattedSuggestions = response.slice(0, 8).map(prediction => ({
-              description: prediction.description,
-              place_id: prediction.place_id,
-              structured_formatting: {
-                main_text: prediction.structured_formatting.main_text,
-                secondary_text: prediction.structured_formatting.secondary_text || ''
-              }
-            }))
-
-            setSuggestions(formattedSuggestions)
-          } catch (fallbackError) {
-            console.error('Fallback error:', fallbackError)
-            setSuggestions([])
-          }
-          
+          setSuggestions([])
           setIsLoading(false)
         }
       } else {
-        // Fallback para quando Google Maps não está disponível
-        await new Promise(resolve => setTimeout(resolve, 300))
+        // Quando Google Maps não está disponível
         setSuggestions([])
         setIsLoading(false)
       }
@@ -210,31 +173,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             }
           }
         } catch (error) {
-          console.error('Error getting place details:', error)
-          // Fallback: usar geocoding se place details falhar
-          if (window.google) {
-            const geocoder = new google.maps.Geocoder()
-            geocoder.geocode({ address: selectedText }, (results, status) => {
-              if (status === 'OK' && results?.[0]) {
-                const location = {
-                  lat: results[0].geometry.location.lat(),
-                  lng: results[0].geometry.location.lng()
-                }
-                setSelectedLocation(location)
-                
-                if (mapRef.current && !mapInstance.current) {
-                  initializeMap(location)
-                } else if (mapInstance.current) {
-                  mapInstance.current.setCenter(location)
-                  new google.maps.Marker({
-                    position: location,
-                    map: mapInstance.current,
-                    title: selectedText
-                  })
-                }
-              }
-            })
-          }
+          console.error('Error getting place details with Places API (New):', error)
         }
       }
       
