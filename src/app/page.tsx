@@ -79,15 +79,23 @@ export default function TalentMatchLanding() {
     setSubmitMessage('')
     
     try {
+      // Preparar dados para envio
+      const dataToSend = {
+        ...formData,
+        telefone: formData.telefone.replace(/\D/g, ''), // Remove formatação do telefone
+        tecnologias: formData.tecnologias.join(', ')
+      }
+      
+      console.log('Dados sendo enviados:', dataToSend)
+      console.log('Telefone original:', formData.telefone)
+      console.log('Telefone limpo:', dataToSend.telefone)
+      
       const response = await fetch('/api/candidates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          tecnologias: formData.tecnologias.join(', ')
-        }),
+        body: JSON.stringify(dataToSend),
       })
       
       const result = await response.json()
