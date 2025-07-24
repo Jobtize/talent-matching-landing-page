@@ -262,10 +262,39 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                   })
                 }
               } else {
-                // Se não encontrar nenhum lugar próximo, usar coordenadas
-                const address = `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
-                setInputValue(address)
-                onChange(address)
+                // Se não encontrar nenhum lugar próximo, tentar com raio maior
+                try {
+                  const largerRequest = {
+                    locationRestriction: {
+                      center: location,
+                      radius: 500 // Tentar com 500 metros
+                    },
+                    includedTypes: ['locality', 'sublocality', 'administrative_area_level_2'],
+                    maxResultCount: 1,
+                    fields: ['displayName', 'formattedAddress', 'location', 'id']
+                  }
+
+                  const largerResult = await (Place as any).searchNearby(largerRequest)
+                  console.log('searchNearby larger radius result:', largerResult)
+
+                  if (largerResult && Array.isArray(largerResult) && largerResult.length > 0) {
+                    const nearestArea = largerResult[0] as { formattedAddress?: string; displayName?: string }
+                    const address = nearestArea.formattedAddress || nearestArea.displayName || 'Minha localização atual'
+                    setInputValue(address)
+                    onChange(address)
+                  } else {
+                    // Fallback final: texto amigável
+                    const address = 'Minha localização atual'
+                    setInputValue(address)
+                    onChange(address)
+                  }
+                } catch (error) {
+                  console.error('Error with larger radius search:', error)
+                  // Fallback final: texto amigável
+                  const address = 'Minha localização atual'
+                  setInputValue(address)
+                  onChange(address)
+                }
                 
                 if (mapRef.current && !mapInstance.current) {
                   initializeMap(location)
@@ -282,8 +311,8 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               setIsLoading(false)
             } catch (error) {
               console.error('Error with Places API (New) searchNearby:', error)
-              // Fallback para coordenadas se a API falhar
-              const address = `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
+              // Fallback amigável se a API falhar
+              const address = 'Minha localização atual'
               setInputValue(address)
               onChange(address)
               
