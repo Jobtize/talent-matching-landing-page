@@ -13,6 +13,7 @@
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.2",
     "@googlemaps/js-api-loader": "^1.16.10",
+    "@googlemaps/places": "^2.1.0",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-select": "^2.1.2",
     "autoprefixer": "^10.4.20",

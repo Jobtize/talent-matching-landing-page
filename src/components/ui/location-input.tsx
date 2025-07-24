@@ -89,14 +89,30 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             types: ['(cities)'] // Focar em cidades
           }
 
-          autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-              setSuggestions(predictions.slice(0, 8))
-            } else {
-              setSuggestions([])
-            }
-            setIsLoading(false)
+          // Usar a nova API com Promise para melhor tratamento de erros
+          const response = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve, reject) => {
+            autocompleteService.current!.getPlacePredictions(request, (predictions, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                resolve(predictions)
+              } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                resolve([])
+              } else {
+                reject(new Error(`Places API error: ${status}`))
+              }
+            })
           })
+
+          const formattedSuggestions = response.slice(0, 8).map(prediction => ({
+            description: prediction.description,
+            place_id: prediction.place_id,
+            structured_formatting: {
+              main_text: prediction.structured_formatting.main_text,
+              secondary_text: prediction.structured_formatting.secondary_text || ''
+            }
+          }))
+
+          setSuggestions(formattedSuggestions)
+          setIsLoading(false)
         } catch (error) {
           console.error('Error fetching places:', error)
           setSuggestions([])
