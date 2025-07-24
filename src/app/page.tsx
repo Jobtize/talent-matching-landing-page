@@ -82,7 +82,7 @@ export default function TalentMatchLanding() {
     return text
       .replace(/[<>]/g, '') // Remove < e >
       .replace(/javascript:/gi, '') // Remove javascript:
-      .replace(/on\w+=/gi, '') // Remove event handlers como onclick=
+      .replace(/on\w+\s*[=:]/gi, '') // Remove event handlers como onclick=, onclick , onmouseover:
       .trim()
       .substring(0, 100) // Limita tamanho
   }
