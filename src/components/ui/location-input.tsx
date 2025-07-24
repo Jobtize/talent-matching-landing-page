@@ -48,7 +48,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           // Carregar Google Maps dinamicamente
           if (!window.google) {
             const script = document.createElement('script')
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async`
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&v=weekly`
             script.async = true
             script.defer = true
             
@@ -228,8 +228,29 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           setSelectedLocation(location)
           
           // Usar Places API (New) para encontrar o lugar mais próximo
-          if (googleMapsLoaded && window.google) {
+          if (googleMapsLoaded && window.google && window.google.maps) {
             try {
+              // Verificar se importLibrary está disponível
+              if (!google.maps.importLibrary) {
+                console.error('importLibrary not available. Using fallback.')
+                const address = 'Minha localização atual'
+                setInputValue(address)
+                onChange(address)
+                
+                if (mapRef.current && !mapInstance.current) {
+                  initializeMap(location)
+                } else if (mapInstance.current) {
+                  mapInstance.current.setCenter(location)
+                  new google.maps.Marker({
+                    position: location,
+                    map: mapInstance.current,
+                    title: address
+                  })
+                }
+                setIsLoading(false)
+                return
+              }
+
               const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
               
               // Buscar apenas bairro/região e cidade
