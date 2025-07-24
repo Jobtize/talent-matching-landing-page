@@ -210,11 +210,20 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
         
         // Aguardar um pouco para garantir que o DOM está pronto
         setTimeout(() => {
-          if (!mapRef.current) return
+          if (!mapRef.current) {
+            console.log('mapRef.current is null, aborting')
+            return
+          }
+          
+          // Limpar qualquer instância anterior
+          if (mapInstance.current) {
+            console.log('Clearing previous map instance')
+            mapInstance.current = null
+          }
           
           mapInstance.current = new google.maps.Map(mapRef.current, {
             center,
-            zoom: 13,
+            zoom: selectedLocation ? 13 : 5, // Zoom menor se não há localização específica
             styles: [
               {
                 featureType: "poi",
@@ -227,21 +236,33 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           // Aguardar o mapa carregar antes de adicionar marker
           google.maps.event.addListenerOnce(mapInstance.current, 'idle', () => {
             console.log('Map loaded successfully')
-            new google.maps.Marker({
-              position: center,
-              map: mapInstance.current,
-              title: inputValue
-            })
+            
+            // Só adicionar marker se há uma localização específica
+            if (selectedLocation && mapInstance.current) {
+              new google.maps.Marker({
+                position: center,
+                map: mapInstance.current,
+                title: inputValue || 'Localização'
+              })
+            }
           })
           
           // Timeout de segurança caso o mapa não carregue
           setTimeout(() => {
-            if (mapInstance.current && !mapInstance.current.getCenter()) {
-              console.log('Map loading timeout, forcing center')
-              mapInstance.current.setCenter(center)
+            if (mapInstance.current) {
+              try {
+                const currentCenter = mapInstance.current.getCenter()
+                if (!currentCenter) {
+                  console.log('Map loading timeout, forcing center')
+                  mapInstance.current.setCenter(center)
+                }
+              } catch (e) {
+                console.log('Error checking map center, forcing center')
+                mapInstance.current.setCenter(center)
+              }
             }
-          }, 2000)
-        }, 100)
+          }, 3000)
+        }, 200) // Aumentei o timeout para 200ms
         
       } catch (error) {
         console.error('Error initializing map:', error)
@@ -417,6 +438,16 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       setInputValue(value)
     }, [value])
 
+    // Inicializar mapa quando showMap for true
+    React.useEffect(() => {
+      if (showMap && googleMapsLoaded && mapRef.current && !mapInstance.current) {
+        console.log('Initializing map from useEffect')
+        // Usar localização selecionada ou centro do Brasil como fallback
+        const defaultCenter = selectedLocation || { lat: -14.235, lng: -51.9253 }
+        initializeMap(defaultCenter)
+      }
+    }, [showMap, googleMapsLoaded, selectedLocation])
+
     return (
       <div ref={ref} className={cn("relative", className)}>
         <div className="relative">
@@ -488,7 +519,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           </div>
         )}
 
-        {showMap && selectedLocation && googleMapsLoaded && (
+        {showMap && googleMapsLoaded && (
           <div className="mt-2 border border-input rounded-md overflow-hidden">
             <div 
               ref={mapRef} 
