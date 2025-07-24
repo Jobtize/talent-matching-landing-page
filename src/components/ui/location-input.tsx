@@ -45,8 +45,8 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
         }
 
         try {
-          // Carregar Google Maps dinamicamente
-          if (!window.google) {
+          // Carregar Google Maps dinamicamente (apenas uma vez)
+          if (!window.google && !document.querySelector('script[src*="maps.googleapis.com"]')) {
             const script = document.createElement('script')
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&v=weekly`
             script.async = true
@@ -59,7 +59,17 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             })
           }
           
-          setGoogleMapsLoaded(true)
+          // Aguardar o Google Maps estar totalmente carregado
+          if (window.google && window.google.maps) {
+            setGoogleMapsLoaded(true)
+          } else {
+            // Aguardar um pouco mais se ainda não carregou
+            setTimeout(() => {
+              if (window.google && window.google.maps) {
+                setGoogleMapsLoaded(true)
+              }
+            }, 1000)
+          }
         } catch (error) {
           console.error('Error loading Google Maps:', error)
         }
