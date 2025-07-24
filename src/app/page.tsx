@@ -32,6 +32,28 @@ interface FormData {
   curriculo?: File | null
 }
 
+interface ExistingUserData {
+  nome: string
+  email: string
+  telefone?: string
+  cargo?: string
+  experiencia?: string
+  localizacao?: string
+  areas?: string
+  created_at: string
+}
+
+interface PendingFormData {
+  nome: string
+  email: string
+  telefone: string
+  cargo: string
+  experiencia: string
+  localizacao: string
+  areas: string
+  tecnologias: string
+}
+
 export default function TalentMatchLanding() {
   const [formData, setFormData] = useState<FormData>({
     nome: '',
@@ -48,6 +70,11 @@ export default function TalentMatchLanding() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = useState('')
+  
+  // Estados para modal de confirmação de atualização
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
+  const [existingUserData, setExistingUserData] = useState<ExistingUserData | null>(null)
+  const [pendingFormData, setPendingFormData] = useState<PendingFormData | null>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -77,6 +104,65 @@ export default function TalentMatchLanding() {
       ...prev,
       curriculo: file
     }))
+  }
+
+  // Função para confirmar atualização dos dados
+  const handleConfirmUpdate = async () => {
+    if (!pendingFormData) return
+    
+    setIsSubmitting(true)
+    setShowUpdateModal(false)
+    setSubmitStatus('idle')
+    setSubmitMessage('')
+    
+    try {
+      const response = await fetch('/api/candidates', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pendingFormData),
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        setSubmitStatus('success')
+        setSubmitMessage(`Dados atualizados com sucesso! Obrigado, ${result.data.nome}. Suas informações foram atualizadas em nossa base.`)
+        
+        // Reset do formulário após sucesso
+        setFormData({
+          nome: '',
+          email: '',
+          telefone: '',
+          cargo: '',
+          experiencia: '',
+          localizacao: '',
+          areas: '',
+          tecnologias: [],
+          curriculo: null
+        })
+      } else {
+        setSubmitStatus('error')
+        setSubmitMessage(result.error || 'Erro ao atualizar dados. Tente novamente.')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar dados:', error)
+      setSubmitStatus('error')
+      setSubmitMessage('Erro de conexão. Verifique sua internet e tente novamente.')
+    } finally {
+      setIsSubmitting(false)
+      setExistingUserData(null)
+      setPendingFormData(null)
+    }
+  }
+
+  // Função para cancelar atualização
+  const handleCancelUpdate = () => {
+    setShowUpdateModal(false)
+    setExistingUserData(null)
+    setPendingFormData(null)
+    setIsSubmitting(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,6 +215,14 @@ export default function TalentMatchLanding() {
           curriculo: null
         })
       } else {
+        // Tratamento específico para email duplicado
+        if (result.code === 'EMAIL_ALREADY_EXISTS' && result.existingData) {
+          setExistingUserData(result.existingData)
+          setPendingFormData(dataToSend)
+          setShowUpdateModal(true)
+          return
+        }
+        
         setSubmitStatus('error')
         
         // Mensagens específicas para diferentes tipos de erro
@@ -387,6 +481,73 @@ export default function TalentMatchLanding() {
           </div>
         </div>
       </section>
+
+      {/* Modal de Confirmação de Atualização */}
+      {showUpdateModal && existingUserData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 animate-fade-in-up">
+            <div className="flex items-start mb-4">
+              <AlertCircle className="w-6 h-6 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Email já cadastrado
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Encontramos um cadastro com este email. Deseja atualizar seus dados?
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Dados atuais:</h4>
+              <div className="space-y-1 text-sm text-gray-600">
+                <p><strong>Nome:</strong> {existingUserData.nome}</p>
+                <p><strong>Email:</strong> {existingUserData.email}</p>
+                {existingUserData.telefone && (
+                  <p><strong>Telefone:</strong> {existingUserData.telefone}</p>
+                )}
+                {existingUserData.cargo && (
+                  <p><strong>Cargo:</strong> {existingUserData.cargo}</p>
+                )}
+                {existingUserData.experiencia && (
+                  <p><strong>Experiência:</strong> {existingUserData.experiencia}</p>
+                )}
+                {existingUserData.localizacao && (
+                  <p><strong>Localização:</strong> {existingUserData.localizacao}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-2">
+                  Cadastrado em: {new Date(existingUserData.created_at).toLocaleDateString('pt-BR')}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                onClick={handleConfirmUpdate}
+                disabled={isSubmitting}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Atualizando...
+                  </>
+                ) : (
+                  'Sim, atualizar dados'
+                )}
+              </Button>
+              <Button
+                onClick={handleCancelUpdate}
+                variant="outline"
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Section */}
       <section className="py-16 bg-white">
