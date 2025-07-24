@@ -232,80 +232,59 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             try {
               const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
               
+              // Buscar apenas bairro/região e cidade
               const request = {
                 locationRestriction: {
                   center: location,
-                  radius: 100 // 100 metros de raio
+                  radius: 1000 // 1km de raio para pegar bairro/cidade
                 },
-                includedTypes: ['establishment', 'point_of_interest', 'street_address'],
-                maxResultCount: 1,
-                fields: ['displayName', 'formattedAddress', 'location', 'id']
+                includedTypes: ['locality', 'sublocality', 'administrative_area_level_2', 'administrative_area_level_1'],
+                maxResultCount: 3, // Pegar mais opções para escolher a melhor
+                fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
               }
 
               const result = await (Place as any).searchNearby(request)
               console.log('searchNearby result:', result)
 
+              let address = 'Minha localização atual'
+
               if (result && Array.isArray(result) && result.length > 0) {
-                const nearestPlace = result[0] as { formattedAddress?: string; displayName?: string }
-                const address = nearestPlace.formattedAddress || nearestPlace.displayName || 'Localização atual'
-                setInputValue(address)
-                onChange(address)
+                // Procurar primeiro por sublocality (bairro), depois locality (cidade)
+                const sublocality = result.find((place: any) => 
+                  place.types?.includes('sublocality') || place.types?.includes('sublocality_level_1')
+                )
+                const locality = result.find((place: any) => 
+                  place.types?.includes('locality')
+                )
                 
-                if (mapRef.current && !mapInstance.current) {
-                  initializeMap(location)
-                } else if (mapInstance.current) {
-                  mapInstance.current.setCenter(location)
-                  new google.maps.Marker({
-                    position: location,
-                    map: mapInstance.current,
-                    title: address
-                  })
+                if (sublocality && locality) {
+                  // Bairro + Cidade
+                  address = `${sublocality.displayName}, ${locality.displayName}`
+                } else if (locality) {
+                  // Apenas cidade
+                  address = locality.displayName
+                } else if (sublocality) {
+                  // Apenas bairro
+                  address = sublocality.displayName
+                } else {
+                  // Usar o primeiro resultado disponível
+                  const firstPlace = result[0] as { formattedAddress?: string; displayName?: string }
+                  address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
                 }
-              } else {
-                // Se não encontrar nenhum lugar próximo, tentar com raio maior
-                try {
-                  const largerRequest = {
-                    locationRestriction: {
-                      center: location,
-                      radius: 500 // Tentar com 500 metros
-                    },
-                    includedTypes: ['locality', 'sublocality', 'administrative_area_level_2'],
-                    maxResultCount: 1,
-                    fields: ['displayName', 'formattedAddress', 'location', 'id']
-                  }
+              }
 
-                  const largerResult = await (Place as any).searchNearby(largerRequest)
-                  console.log('searchNearby larger radius result:', largerResult)
-
-                  if (largerResult && Array.isArray(largerResult) && largerResult.length > 0) {
-                    const nearestArea = largerResult[0] as { formattedAddress?: string; displayName?: string }
-                    const address = nearestArea.formattedAddress || nearestArea.displayName || 'Minha localização atual'
-                    setInputValue(address)
-                    onChange(address)
-                  } else {
-                    // Fallback final: texto amigável
-                    const address = 'Minha localização atual'
-                    setInputValue(address)
-                    onChange(address)
-                  }
-                } catch (error) {
-                  console.error('Error with larger radius search:', error)
-                  // Fallback final: texto amigável
-                  const address = 'Minha localização atual'
-                  setInputValue(address)
-                  onChange(address)
-                }
-                
-                if (mapRef.current && !mapInstance.current) {
-                  initializeMap(location)
-                } else if (mapInstance.current) {
-                  mapInstance.current.setCenter(location)
-                  new google.maps.Marker({
-                    position: location,
-                    map: mapInstance.current,
-                    title: 'Minha localização'
-                  })
-                }
+              setInputValue(address)
+              onChange(address)
+              
+              if (mapRef.current && !mapInstance.current) {
+                initializeMap(location)
+              } else if (mapInstance.current) {
+                mapInstance.current.setCenter(location)
+                new google.maps.Marker({
+                  position: location,
+                  map: mapInstance.current,
+                  title: address
+                })
               }
               
               setIsLoading(false)
