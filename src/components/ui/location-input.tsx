@@ -219,7 +219,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 
       setIsLoading(true)
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
@@ -227,12 +227,26 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           
           setSelectedLocation(location)
           
-          // Reverse geocoding para obter o endereço
-          if (googleMapsLoaded) {
-            const geocoder = new google.maps.Geocoder()
-            geocoder.geocode({ location }, (results, status) => {
-              if (status === 'OK' && results?.[0]) {
-                const address = results[0].formatted_address
+          // Usar Places API (New) para encontrar o lugar mais próximo
+          if (googleMapsLoaded && window.google) {
+            try {
+              const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
+              
+              const request = {
+                locationRestriction: {
+                  center: location,
+                  radius: 100 // 100 metros de raio
+                },
+                includedTypes: ['establishment', 'point_of_interest', 'street_address'],
+                maxResultCount: 1,
+                fields: ['displayName', 'formattedAddress', 'location', 'id']
+              }
+
+              const { places } = await (Place as any).searchNearby(request)
+
+              if (places && places.length > 0) {
+                const nearestPlace = places[0] as { formattedAddress?: string; displayName?: string }
+                const address = nearestPlace.formattedAddress || nearestPlace.displayName || 'Localização atual'
                 setInputValue(address)
                 onChange(address)
                 
@@ -246,9 +260,45 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                     title: address
                   })
                 }
+              } else {
+                // Se não encontrar nenhum lugar próximo, usar coordenadas
+                const address = `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
+                setInputValue(address)
+                onChange(address)
+                
+                if (mapRef.current && !mapInstance.current) {
+                  initializeMap(location)
+                } else if (mapInstance.current) {
+                  mapInstance.current.setCenter(location)
+                  new google.maps.Marker({
+                    position: location,
+                    map: mapInstance.current,
+                    title: 'Minha localização'
+                  })
+                }
               }
+              
               setIsLoading(false)
-            })
+            } catch (error) {
+              console.error('Error with Places API (New) searchNearby:', error)
+              // Fallback para coordenadas se a API falhar
+              const address = `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
+              setInputValue(address)
+              onChange(address)
+              
+              if (mapRef.current && !mapInstance.current) {
+                initializeMap(location)
+              } else if (mapInstance.current) {
+                mapInstance.current.setCenter(location)
+                new google.maps.Marker({
+                  position: location,
+                  map: mapInstance.current,
+                  title: 'Minha localização'
+                })
+              }
+              
+              setIsLoading(false)
+            }
           } else {
             setIsLoading(false)
           }
