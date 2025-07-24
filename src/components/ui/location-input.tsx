@@ -200,25 +200,52 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 
     // Inicializar mapa
     const initializeMap = (center: {lat: number, lng: number}) => {
-      if (!mapRef.current || !googleMapsLoaded) return
+      if (!mapRef.current || !googleMapsLoaded || !window.google?.maps) {
+        console.log('Map initialization failed - missing requirements')
+        return
+      }
 
-      mapInstance.current = new google.maps.Map(mapRef.current, {
-        center,
-        zoom: 13,
-        styles: [
-          {
-            featureType: "poi",
-            elementType: "labels",
-            stylers: [{ visibility: "off" }]
-          }
-        ]
-      })
+      try {
+        console.log('Initializing map with center:', center)
+        
+        // Aguardar um pouco para garantir que o DOM está pronto
+        setTimeout(() => {
+          if (!mapRef.current) return
+          
+          mapInstance.current = new google.maps.Map(mapRef.current, {
+            center,
+            zoom: 13,
+            styles: [
+              {
+                featureType: "poi",
+                elementType: "labels",
+                stylers: [{ visibility: "off" }]
+              }
+            ]
+          })
 
-      new google.maps.Marker({
-        position: center,
-        map: mapInstance.current,
-        title: inputValue
-      })
+          // Aguardar o mapa carregar antes de adicionar marker
+          google.maps.event.addListenerOnce(mapInstance.current, 'idle', () => {
+            console.log('Map loaded successfully')
+            new google.maps.Marker({
+              position: center,
+              map: mapInstance.current,
+              title: inputValue
+            })
+          })
+          
+          // Timeout de segurança caso o mapa não carregue
+          setTimeout(() => {
+            if (mapInstance.current && !mapInstance.current.getCenter()) {
+              console.log('Map loading timeout, forcing center')
+              mapInstance.current.setCenter(center)
+            }
+          }, 2000)
+        }, 100)
+        
+      } catch (error) {
+        console.error('Error initializing map:', error)
+      }
     }
 
     // Obter localização atual
@@ -277,29 +304,43 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 
               const result = await (Place as any).searchNearby(request)
               console.log('searchNearby result:', result)
+              console.log('searchNearby result length:', result?.length)
+              console.log('searchNearby result details:', JSON.stringify(result, null, 2))
 
               let address = 'Minha localização atual'
 
               if (result && Array.isArray(result) && result.length > 0) {
+                console.log('Processing places results...')
+                
                 // Procurar por locality (cidade) e administrative areas
-                const locality = result.find((place: any) => 
-                  place.types?.includes('locality')
-                )
-                const adminLevel2 = result.find((place: any) => 
-                  place.types?.includes('administrative_area_level_2')
-                )
+                const locality = result.find((place: any) => {
+                  console.log('Checking place types:', place.types, 'for locality')
+                  return place.types?.includes('locality')
+                })
+                const adminLevel2 = result.find((place: any) => {
+                  console.log('Checking place types:', place.types, 'for admin_level_2')
+                  return place.types?.includes('administrative_area_level_2')
+                })
+                
+                console.log('Found locality:', locality?.displayName)
+                console.log('Found adminLevel2:', adminLevel2?.displayName)
                 
                 if (locality) {
                   // Usar cidade
                   address = locality.displayName
+                  console.log('Using locality:', address)
                 } else if (adminLevel2) {
                   // Usar área administrativa (região)
                   address = adminLevel2.displayName
+                  console.log('Using adminLevel2:', address)
                 } else {
                   // Usar o primeiro resultado disponível
-                  const firstPlace = result[0] as { formattedAddress?: string; displayName?: string }
+                  const firstPlace = result[0] as { formattedAddress?: string; displayName?: string; types?: string[] }
                   address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
+                  console.log('Using first place:', address, 'types:', firstPlace.types)
                 }
+              } else {
+                console.log('No results found, using fallback')
               }
 
               setInputValue(address)
