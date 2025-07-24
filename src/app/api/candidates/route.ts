@@ -135,9 +135,9 @@ async function updateCandidate(candidateId: number, formData: FormData, clientIP
     const logRequest = new sql.Request(transaction)
     logRequest.input('candidate_id', sql.Int, candidateId)
     logRequest.input('action', sql.NVarChar(50), 'UPDATE')
-    logRequest.input('details', sql.NVarChar(500), `Candidato atualizado via formulário web. Tecnologias: ${insertedTechnologies.length}`)
+    logRequest.input('details', sql.NVarChar(USER_AGENT_MAX_LENGTH), `Candidato atualizado via formulário web. Tecnologias: ${insertedTechnologies.length}`)
     logRequest.input('ip_address', sql.NVarChar(45), clientIP)
-    logRequest.input('user_agent', sql.NVarChar(500), userAgent.substring(0, 500))
+    logRequest.input('user_agent', sql.NVarChar(USER_AGENT_MAX_LENGTH), userAgent.substring(0, USER_AGENT_MAX_LENGTH))
     logRequest.input('performed_by', sql.NVarChar(100), 'web_form')
     
     await logRequest.query(`
