@@ -97,7 +97,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             fields: ['displayName', 'formattedAddress', 'location', 'id'],
             locationBias: {
               center: { lat: -14.235, lng: -51.9253 }, // Centro do Brasil
-              radius: 5000000 // 5000km para cobrir todo o Brasil
+              radius: 50000 // 50km (máximo permitido)
             },
             maxResultCount: 8
           }
