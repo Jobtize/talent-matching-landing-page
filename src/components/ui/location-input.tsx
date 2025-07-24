@@ -95,8 +95,9 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           const request = {
             textQuery: query,
             fields: ['displayName', 'formattedAddress', 'location', 'id'],
-            locationRestriction: {
-              country: 'BR' // Restringir ao Brasil
+            locationBias: {
+              center: { lat: -14.235, lng: -51.9253 }, // Centro do Brasil
+              radius: 5000000 // 5000km para cobrir todo o Brasil
             },
             maxResultCount: 8
           }
@@ -269,7 +270,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                   center: location,
                   radius: 1000 // 1km de raio para pegar bairro/cidade
                 },
-                includedTypes: ['locality', 'sublocality', 'administrative_area_level_2', 'administrative_area_level_1'],
+                includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1'],
                 maxResultCount: 3, // Pegar mais opções para escolher a melhor
                 fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
               }
@@ -280,23 +281,20 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               let address = 'Minha localização atual'
 
               if (result && Array.isArray(result) && result.length > 0) {
-                // Procurar primeiro por sublocality (bairro), depois locality (cidade)
-                const sublocality = result.find((place: any) => 
-                  place.types?.includes('sublocality') || place.types?.includes('sublocality_level_1')
-                )
+                // Procurar por locality (cidade) e administrative areas
                 const locality = result.find((place: any) => 
                   place.types?.includes('locality')
                 )
+                const adminLevel2 = result.find((place: any) => 
+                  place.types?.includes('administrative_area_level_2')
+                )
                 
-                if (sublocality && locality) {
-                  // Bairro + Cidade
-                  address = `${sublocality.displayName}, ${locality.displayName}`
-                } else if (locality) {
-                  // Apenas cidade
+                if (locality) {
+                  // Usar cidade
                   address = locality.displayName
-                } else if (sublocality) {
-                  // Apenas bairro
-                  address = sublocality.displayName
+                } else if (adminLevel2) {
+                  // Usar área administrativa (região)
+                  address = adminLevel2.displayName
                 } else {
                   // Usar o primeiro resultado disponível
                   const firstPlace = result[0] as { formattedAddress?: string; displayName?: string }
