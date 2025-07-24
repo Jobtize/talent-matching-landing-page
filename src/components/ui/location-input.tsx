@@ -3,7 +3,6 @@
 import * as React from "react"
 import { MapPin, Loader2, Navigation, Map } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Loader } from "@googlemaps/js-api-loader"
 
 export interface LocationInputProps {
   value: string
@@ -33,11 +32,9 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     
     const inputRef = React.useRef<HTMLInputElement>(null)
     const mapRef = React.useRef<HTMLDivElement>(null)
-    const autocompleteService = React.useRef<google.maps.places.AutocompleteService | null>(null)
-    const placesService = React.useRef<google.maps.places.PlacesService | null>(null)
     const mapInstance = React.useRef<google.maps.Map | null>(null)
 
-    // Inicializar Google Maps
+    // Inicializar Google Maps com Places API (New)
     React.useEffect(() => {
       const initGoogleMaps = async () => {
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
@@ -48,20 +45,19 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
         }
 
         try {
-          const loader = new Loader({
-            apiKey,
-            version: "weekly",
-            libraries: ["places", "geometry"]
-          })
-
-          await loader.load()
-          
-          // Inicializar serviços
-          autocompleteService.current = new google.maps.places.AutocompleteService()
-          
-          // Criar um div temporário para o PlacesService
-          const tempDiv = document.createElement('div')
-          placesService.current = new google.maps.places.PlacesService(tempDiv)
+          // Carregar Google Maps dinamicamente
+          if (!window.google) {
+            const script = document.createElement('script')
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async`
+            script.async = true
+            script.defer = true
+            
+            await new Promise<void>((resolve, reject) => {
+              script.onload = () => resolve()
+              script.onerror = reject
+              document.head.appendChild(script)
+            })
+          }
           
           setGoogleMapsLoaded(true)
         } catch (error) {
@@ -72,7 +68,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       initGoogleMaps()
     }, [])
 
-    // Busca de localizações usando Google Places API
+    // Busca de localizações usando Places API (New)
     const searchLocations = React.useCallback(async (query: string) => {
       if (query.length < 2) {
         setSuggestions([])
@@ -81,41 +77,81 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 
       setIsLoading(true)
 
-      if (googleMapsLoaded && autocompleteService.current) {
+      if (googleMapsLoaded && window.google) {
         try {
+          // Usar Places API (New) - Text Search
+          const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
+          
           const request = {
-            input: query,
-            componentRestrictions: { country: 'br' }, // Restringir ao Brasil
-            types: ['(cities)'] // Focar em cidades
+            textQuery: query,
+            fields: ['displayName', 'formattedAddress', 'location', 'id'],
+            locationRestriction: {
+              country: 'BR' // Restringir ao Brasil
+            },
+            maxResultCount: 8
           }
 
-          // Usar a nova API com Promise para melhor tratamento de erros
-          const response = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve, reject) => {
-            autocompleteService.current!.getPlacePredictions(request, (predictions, status) => {
-              if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-                resolve(predictions)
-              } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-                resolve([])
-              } else {
-                reject(new Error(`Places API error: ${status}`))
+          // @ts-expect-error - Places API (New) ainda não tem tipos completos
+          const { places } = await Place.searchByText(request)
+
+          if (places && places.length > 0) {
+            const formattedSuggestions = places.map((place: unknown, index: number) => {
+              const p = place as { formattedAddress?: string; displayName?: string; id?: string }
+              return {
+                description: p.formattedAddress || p.displayName || '',
+                place_id: p.id || `place_${index}`,
+                structured_formatting: {
+                  main_text: p.displayName || '',
+                  secondary_text: p.formattedAddress || ''
+                }
               }
             })
-          })
 
-          const formattedSuggestions = response.slice(0, 8).map(prediction => ({
-            description: prediction.description,
-            place_id: prediction.place_id,
-            structured_formatting: {
-              main_text: prediction.structured_formatting.main_text,
-              secondary_text: prediction.structured_formatting.secondary_text || ''
-            }
-          }))
-
-          setSuggestions(formattedSuggestions)
+            setSuggestions(formattedSuggestions)
+          } else {
+            setSuggestions([])
+          }
+          
           setIsLoading(false)
         } catch (error) {
-          console.error('Error fetching places:', error)
-          setSuggestions([])
+          console.error('Error with Places API (New):', error)
+          
+          // Fallback para autocomplete legacy se a nova API falhar
+          try {
+            const autocompleteService = new google.maps.places.AutocompleteService()
+            const request = {
+              input: query,
+              componentRestrictions: { country: 'br' },
+              types: ['(cities)']
+            }
+
+            const response = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve, reject) => {
+              autocompleteService.getPlacePredictions(request, (predictions, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                  resolve(predictions)
+                } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                  resolve([])
+                } else {
+                  reject(new Error(`Places API error: ${status}`))
+                }
+              })
+            })
+
+            const formattedSuggestions = response.slice(0, 8).map(prediction => ({
+              description: prediction.description,
+              place_id: prediction.place_id,
+              structured_formatting: {
+                main_text: prediction.structured_formatting.main_text,
+                secondary_text: prediction.structured_formatting.secondary_text || ''
+              }
+            }))
+
+            setSuggestions(formattedSuggestions)
+          } catch (fallbackError) {
+            console.error('Fallback error:', fallbackError)
+            setSuggestions([])
+          }
+          
           setIsLoading(false)
         }
       } else {
@@ -133,24 +169,30 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       searchLocations(newValue)
     }
 
-    const handleSuggestionClick = (suggestion: PlacePrediction) => {
+    const handleSuggestionClick = async (suggestion: PlacePrediction) => {
       const selectedText = suggestion.description
       setInputValue(selectedText)
       setShowSuggestions(false)
       setSuggestions([])
       
-      // Obter coordenadas do local selecionado
-      if (googleMapsLoaded && placesService.current) {
-        const request = {
-          placeId: suggestion.place_id,
-          fields: ['geometry', 'formatted_address']
-        }
-        
-        placesService.current.getDetails(request, (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+      // Obter coordenadas usando Places API (New)
+      if (googleMapsLoaded && window.google) {
+        try {
+          const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
+          
+          const place = new Place({
+            id: suggestion.place_id,
+            requestedLanguage: 'pt-BR'
+          })
+
+          await (place as any).fetchFields({
+            fields: ['location', 'formattedAddress']
+          })
+
+          if ((place as any).location) {
             const location = {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng()
+              lat: (place as any).location.lat(),
+              lng: (place as any).location.lng()
             }
             setSelectedLocation(location)
             
@@ -167,7 +209,33 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               })
             }
           }
-        })
+        } catch (error) {
+          console.error('Error getting place details:', error)
+          // Fallback: usar geocoding se place details falhar
+          if (window.google) {
+            const geocoder = new google.maps.Geocoder()
+            geocoder.geocode({ address: selectedText }, (results, status) => {
+              if (status === 'OK' && results?.[0]) {
+                const location = {
+                  lat: results[0].geometry.location.lat(),
+                  lng: results[0].geometry.location.lng()
+                }
+                setSelectedLocation(location)
+                
+                if (mapRef.current && !mapInstance.current) {
+                  initializeMap(location)
+                } else if (mapInstance.current) {
+                  mapInstance.current.setCenter(location)
+                  new google.maps.Marker({
+                    position: location,
+                    map: mapInstance.current,
+                    title: selectedText
+                  })
+                }
+              }
+            })
+          }
+        }
       }
       
       onChange(selectedText)
