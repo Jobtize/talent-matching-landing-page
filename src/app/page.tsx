@@ -29,6 +29,7 @@ interface FormData {
   localizacao: string
   areas: string
   tecnologias: string[]
+  curriculo?: File | null
 }
 
 export default function TalentMatchLanding() {
@@ -40,7 +41,8 @@ export default function TalentMatchLanding() {
     experiencia: '',
     localizacao: '',
     areas: '',
-    tecnologias: []
+    tecnologias: [],
+    curriculo: null
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -69,6 +71,14 @@ export default function TalentMatchLanding() {
     }))
   }
 
+  const handleCurriculoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setFormData(prev => ({
+      ...prev,
+      curriculo: file
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -79,9 +89,10 @@ export default function TalentMatchLanding() {
     setSubmitMessage('')
     
     try {
-      // Preparar dados para envio
+      // Preparar dados para envio (excluindo currículo por enquanto)
+      const { curriculo, ...formDataWithoutFile } = formData
       const dataToSend = {
-        ...formData,
+        ...formDataWithoutFile,
         telefone: formData.telefone.replace(/\D/g, ''), // Remove formatação do telefone
         tecnologias: formData.tecnologias.join(', ')
       }
@@ -113,7 +124,8 @@ export default function TalentMatchLanding() {
           experiencia: '',
           localizacao: '',
           areas: '',
-          tecnologias: []
+          tecnologias: [],
+          curriculo: null
         })
       } else {
         setSubmitStatus('error')
@@ -180,10 +192,6 @@ export default function TalentMatchLanding() {
                 oportunidades baseadas no seu perfil profissional.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="text-lg px-8 py-3">
-                  Cadastre-se Grátis
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
                 <Button variant="outline" size="lg" className="text-lg px-8 py-3">
                   Ver Como Funciona
                 </Button>
@@ -306,6 +314,26 @@ export default function TalentMatchLanding() {
                   />
                 </div>
 
+                {/* Campo de Currículo */}
+                <div className="space-y-2">
+                  <label htmlFor="curriculo" className="block text-sm font-medium text-gray-700">
+                    Currículo (PDF, DOC, DOCX) - Opcional
+                  </label>
+                  <input
+                    id="curriculo"
+                    name="curriculo"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleCurriculoChange}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded-md"
+                  />
+                  {formData.curriculo && (
+                    <p className="text-sm text-green-600">
+                      ✓ Arquivo selecionado: {formData.curriculo.name}
+                    </p>
+                  )}
+                </div>
+
                 <Button 
                   type="submit" 
                   className="w-full text-lg py-3" 
@@ -318,7 +346,7 @@ export default function TalentMatchLanding() {
                     </>
                   ) : (
                     <>
-                      Encontrar Oportunidades
+                      Seja Encontrado
                       <ArrowRight className="ml-2 w-5 h-5" />
                     </>
                   )}
@@ -368,19 +396,19 @@ export default function TalentMatchLanding() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-3xl font-bold text-blue-600 mb-2">10k+</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">1.2k+</div>
               <div className="text-gray-600">Profissionais cadastrados</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-blue-600 mb-2">500+</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">50+</div>
               <div className="text-gray-600">Empresas parceiras</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-blue-600 mb-2">95%</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">92%</div>
               <div className="text-gray-600">Taxa de satisfação</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-blue-600 mb-2">2.5k</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">180+</div>
               <div className="text-gray-600">Contratações realizadas</div>
             </div>
           </div>
