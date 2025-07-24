@@ -27,6 +27,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     const [showSuggestions, setShowSuggestions] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState(false)
     const [showMap, setShowMap] = React.useState(false)
+    const [autoShowMap, setAutoShowMap] = React.useState(true) // Controla se deve mostrar automaticamente
     const [selectedLocation, setSelectedLocation] = React.useState<{lat: number, lng: number} | null>(null)
     const [googleMapsLoaded, setGoogleMapsLoaded] = React.useState(false)
     
@@ -438,6 +439,15 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       setInputValue(value)
     }, [value])
 
+    // Controlar exibição automática do mapa baseado na localização
+    React.useEffect(() => {
+      if (autoShowMap) {
+        // Mostrar mapa se há localização ou valor no input
+        const hasLocation = selectedLocation || (inputValue && inputValue.trim() !== '')
+        setShowMap(hasLocation)
+      }
+    }, [selectedLocation, inputValue, autoShowMap])
+
     // Inicializar mapa quando showMap for true
     React.useEffect(() => {
       if (showMap && googleMapsLoaded && mapRef.current && !mapInstance.current) {
@@ -461,7 +471,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             onFocus={() => setShowSuggestions(suggestions.length > 0)}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 pr-20 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 pr-24 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           />
           
           <div className="absolute right-2 top-2 flex items-center gap-1">
@@ -477,14 +487,51 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                   <Navigation className="w-4 h-4" />
                 </button>
                 
-                <button
-                  type="button"
-                  onClick={() => setShowMap(!showMap)}
-                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Mostrar/ocultar mapa"
-                >
-                  <Map className="w-4 h-4" />
-                </button>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (autoShowMap) {
+                        // Se está em modo automático, desabilitar e alternar manualmente
+                        setAutoShowMap(false)
+                        setShowMap(!showMap)
+                      } else {
+                        // Se está em modo manual, apenas alternar
+                        setShowMap(!showMap)
+                      }
+                    }}
+                    className={`p-1 transition-colors ${
+                      showMap 
+                        ? 'text-blue-600 hover:text-blue-700' 
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                    title={
+                      autoShowMap 
+                        ? "Mapa automático (clique para controle manual)" 
+                        : showMap 
+                          ? "Ocultar mapa" 
+                          : "Mostrar mapa"
+                    }
+                  >
+                    <Map className="w-4 h-4" />
+                  </button>
+                  
+                  {!autoShowMap && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoShowMap(true)
+                        // Reativar comportamento automático
+                        const hasLocation = selectedLocation || (inputValue && inputValue.trim() !== '')
+                        setShowMap(hasLocation)
+                      }}
+                      className="p-1 text-xs text-gray-400 hover:text-blue-600 transition-colors ml-1"
+                      title="Reativar mapa automático"
+                    >
+                      🔄
+                    </button>
+                  )}
+                </div>
               </>
             )}
             
