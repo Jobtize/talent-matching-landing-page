@@ -304,20 +304,22 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 
               const result = await (Place as any).searchNearby(request)
               console.log('searchNearby result:', result)
-              console.log('searchNearby result length:', result?.length)
+              console.log('searchNearby result.places length:', result?.places?.length)
               console.log('searchNearby result details:', JSON.stringify(result, null, 2))
 
               let address = 'Minha localização atual'
 
-              if (result && Array.isArray(result) && result.length > 0) {
+              // A API retorna {places: Array} não um array diretamente
+              const places = result?.places
+              if (places && Array.isArray(places) && places.length > 0) {
                 console.log('Processing places results...')
                 
                 // Procurar por locality (cidade) e administrative areas
-                const locality = result.find((place: any) => {
+                const locality = places.find((place: any) => {
                   console.log('Checking place types:', place.types, 'for locality')
                   return place.types?.includes('locality')
                 })
-                const adminLevel2 = result.find((place: any) => {
+                const adminLevel2 = places.find((place: any) => {
                   console.log('Checking place types:', place.types, 'for admin_level_2')
                   return place.types?.includes('administrative_area_level_2')
                 })
@@ -335,12 +337,12 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                   console.log('Using adminLevel2:', address)
                 } else {
                   // Usar o primeiro resultado disponível
-                  const firstPlace = result[0] as { formattedAddress?: string; displayName?: string; types?: string[] }
+                  const firstPlace = places[0] as { formattedAddress?: string; displayName?: string; types?: string[] }
                   address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
                   console.log('Using first place:', address, 'types:', firstPlace.types)
                 }
               } else {
-                console.log('No results found, using fallback')
+                console.log('No places found, using fallback')
               }
 
               setInputValue(address)
