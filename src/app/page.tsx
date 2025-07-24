@@ -192,11 +192,7 @@ export default function TalentMatchLanding() {
                 Pare de procurar emprego. Nossa plataforma inteligente conecta você às melhores 
                 oportunidades baseadas no seu perfil profissional.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button variant="outline" size="lg" className="text-lg px-8 py-3">
-                  Ver Como Funciona
-                </Button>
-              </div>
+
             </div>
 
             {/* Formulário */}
