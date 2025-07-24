@@ -242,10 +242,11 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                 fields: ['displayName', 'formattedAddress', 'location', 'id']
               }
 
-              const { places } = await (Place as any).searchNearby(request)
+              const result = await (Place as any).searchNearby(request)
+              console.log('searchNearby result:', result)
 
-              if (places && places.length > 0) {
-                const nearestPlace = places[0] as { formattedAddress?: string; displayName?: string }
+              if (result && Array.isArray(result) && result.length > 0) {
+                const nearestPlace = result[0] as { formattedAddress?: string; displayName?: string }
                 const address = nearestPlace.formattedAddress || nearestPlace.displayName || 'Localização atual'
                 setInputValue(address)
                 onChange(address)
