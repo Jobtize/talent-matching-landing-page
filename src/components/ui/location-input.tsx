@@ -34,6 +34,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     const inputRef = React.useRef<HTMLInputElement>(null)
     const mapRef = React.useRef<HTMLDivElement>(null)
     const mapInstance = React.useRef<google.maps.Map | null>(null)
+    const currentMarker = React.useRef<google.maps.Marker | null>(null)
 
     // Inicializar Google Maps com Places API (New)
     React.useEffect(() => {
@@ -142,13 +143,12 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       setInputValue(newValue)
       onChange(newValue)
       
-      // Se o campo foi limpo, resetar localização e fechar mapa automaticamente
+      // Se o campo foi limpo, resetar localização e fechar mapa SEMPRE
       if (newValue.trim() === '') {
         console.log('Input cleared, resetting location and closing map')
         setSelectedLocation(null)
-        if (autoShowMap) {
-          setShowMap(false)
-        }
+        clearPreviousMarker() // Limpar marcador do mapa
+        setShowMap(false) // Fechar mapa sempre, independente do modo
         setSuggestions([])
         setShowSuggestions(false)
         return
@@ -196,11 +196,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             } else if (mapInstance.current) {
               // Atualizar mapa existente
               mapInstance.current.setCenter(location)
-              new google.maps.Marker({
-                position: location,
-                map: mapInstance.current,
-                title: selectedText
-              })
+              addMarker(location, selectedText)
             }
           }
         } catch (error) {
@@ -216,6 +212,29 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           inputRef.current.focus()
         }
       }, 100)
+    }
+
+    // Função para limpar marcador anterior
+    const clearPreviousMarker = () => {
+      if (currentMarker.current) {
+        currentMarker.current.setMap(null)
+        currentMarker.current = null
+        console.log('Previous marker cleared')
+      }
+    }
+
+    // Função para adicionar novo marcador
+    const addMarker = (position: {lat: number, lng: number}, title: string) => {
+      if (mapInstance.current) {
+        clearPreviousMarker() // Limpar marcador anterior
+        
+        currentMarker.current = new google.maps.Marker({
+          position,
+          map: mapInstance.current,
+          title
+        })
+        console.log('New marker added:', title)
+      }
     }
 
     // Inicializar mapa
@@ -269,12 +288,8 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             console.log('Map loaded successfully')
             
             // Só adicionar marker se há uma localização específica
-            if (selectedLocation && mapInstance.current) {
-              new google.maps.Marker({
-                position: center,
-                map: mapInstance.current,
-                title: inputValue || 'Localização'
-              })
+            if (selectedLocation) {
+              addMarker(center, inputValue || 'Localização')
             }
           })
           
@@ -431,11 +446,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                 initializeMap(location)
               } else if (mapInstance.current) {
                 mapInstance.current.setCenter(location)
-                new google.maps.Marker({
-                  position: location,
-                  map: mapInstance.current,
-                  title: address
-                })
+                addMarker(location, address)
               }
               
               setIsLoading(false)
@@ -455,11 +466,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                 initializeMap(location)
               } else if (mapInstance.current) {
                 mapInstance.current.setCenter(location)
-                new google.maps.Marker({
-                  position: location,
-                  map: mapInstance.current,
-                  title: 'Minha localização'
-                })
+                addMarker(location, 'Minha localização')
               }
               
               setIsLoading(false)
@@ -523,6 +530,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       } else if (!showMap && mapInstance.current) {
         // Limpar instância do mapa quando fechado
         console.log('Clearing map instance')
+        clearPreviousMarker() // Limpar marcador também
         mapInstance.current = null
       }
     }, [showMap, googleMapsLoaded, selectedLocation])
