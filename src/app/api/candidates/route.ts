@@ -125,7 +125,7 @@ async function updateCandidate(candidateId: number, formData: FormData, clientIP
         insertedTechnologies.push(tech)
       } catch (error: unknown) {
         // Ignora erros de duplicação
-        if (error instanceof Error && !error.message?.includes('UQ_candidate_technology')) {
+        if (error instanceof sql.RequestError && !(error.number === 2627 || error.number === 2601)) {
           throw error
         }
       }
