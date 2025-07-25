@@ -33,9 +33,13 @@ export async function insertOrUpdateCandidate(
         request.input('areas', sql.NVarChar(500), formData.areas.trim() || null);
         request.input('tecnologias', sql.NText, formData.tecnologias.trim() || null);
 
+        let candidateResult;
+
         if (isUpdate) {
             request.input('id', sql.Int, candidateId);
-            result = await request.query(`
+            
+            // Primeiro executa o UPDATE
+            await request.query(`
         UPDATE candidates SET
           nome = @nome,
           telefone = @telefone,
@@ -45,18 +49,27 @@ export async function insertOrUpdateCandidate(
           areas = @areas,
           tecnologias = @tecnologias,
           updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.nome, INSERTED.email
         WHERE id = @id
       `);
+
+            // Depois busca os dados atualizados
+            const selectRequest = new sql.Request(transaction);
+            selectRequest.input('id', sql.Int, candidateId);
+            candidateResult = await selectRequest.query(`
+        SELECT id, nome, email FROM candidates WHERE id = @id
+      `);
         } else {
+            // Para INSERT, usamos SCOPE_IDENTITY() para obter o ID inserido
             result = await request.query(`
         INSERT INTO candidates (nome, email, telefone, cargo, experiencia, localizacao, areas, tecnologias)
-        OUTPUT INSERTED.id, INSERTED.nome, INSERTED.email
-        VALUES (@nome, @email, @telefone, @cargo, @experiencia, @localizacao, @areas, @tecnologias)
+        VALUES (@nome, @email, @telefone, @cargo, @experiencia, @localizacao, @areas, @tecnologias);
+        
+        SELECT SCOPE_IDENTITY() as id, @nome as nome, @email as email;
       `);
+            candidateResult = result;
         }
 
-        const candidate = result.recordset[0];
+        const candidate = candidateResult.recordset[0];
         const technologies = parseTechnologies(formData.tecnologias);
         const insertedTechnologies: string[] = [];
 

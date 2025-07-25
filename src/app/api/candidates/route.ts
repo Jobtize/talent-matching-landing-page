@@ -53,15 +53,36 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Erro ao cadastrar candidato:', error);
 
+    // Erro de email duplicado
     if (error instanceof Error && error.message?.includes('UNIQUE KEY constraint') && error.message?.includes('email')) {
-      return NextResponse.json({ error: 'Este email já está cadastrado em nossa base de dados.', code: 'EMAIL_ALREADY_EXISTS' }, { status: 409 });
+      return NextResponse.json({ 
+        error: 'Este email já está cadastrado em nossa base de dados.', 
+        code: 'EMAIL_ALREADY_EXISTS' 
+      }, { status: 409 });
     }
 
-    if (error instanceof Error && (error.message?.includes('ConnectionError') || error.message?.includes('timeout'))) {
-      return NextResponse.json({ error: 'Erro de conexão com o banco de dados. Tente novamente em alguns instantes.', code: 'DATABASE_CONNECTION_ERROR' }, { status: 503 });
+    // Erros de conexão com banco de dados
+    if (error instanceof Error && (
+      error.message?.includes('ConnectionError') || 
+      error.message?.includes('timeout') ||
+      error.message?.includes('No connection is specified') ||
+      error.message?.includes('ENOCONN') ||
+      error.message?.includes('Variáveis de ambiente do banco de dados não configuradas') ||
+      error.message?.includes('Falha na conexão com o banco de dados')
+    )) {
+      return NextResponse.json({ 
+        error: 'Erro de conexão com o banco de dados. Verifique a configuração e tente novamente.', 
+        code: 'DATABASE_CONNECTION_ERROR',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }, { status: 503 });
     }
 
-    return NextResponse.json({ error: 'Erro interno do servidor. Tente novamente mais tarde.', code: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
+    // Erro genérico
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor. Tente novamente mais tarde.', 
+      code: 'INTERNAL_SERVER_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined
+    }, { status: 500 });
   }
 }
 
@@ -100,10 +121,27 @@ export async function PUT(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Erro ao atualizar candidato:', error);
 
-    if (error instanceof Error && (error.message?.includes('ConnectionError') || error.message?.includes('timeout'))) {
-      return NextResponse.json({ error: 'Erro de conexão com o banco de dados. Tente novamente em alguns instantes.', code: 'DATABASE_CONNECTION_ERROR' }, { status: 503 });
+    // Erros de conexão com banco de dados
+    if (error instanceof Error && (
+      error.message?.includes('ConnectionError') || 
+      error.message?.includes('timeout') ||
+      error.message?.includes('No connection is specified') ||
+      error.message?.includes('ENOCONN') ||
+      error.message?.includes('Variáveis de ambiente do banco de dados não configuradas') ||
+      error.message?.includes('Falha na conexão com o banco de dados')
+    )) {
+      return NextResponse.json({ 
+        error: 'Erro de conexão com o banco de dados. Verifique a configuração e tente novamente.', 
+        code: 'DATABASE_CONNECTION_ERROR',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }, { status: 503 });
     }
 
-    return NextResponse.json({ error: 'Erro interno do servidor. Tente novamente mais tarde.', code: 'INTERNAL_SERVER_ERROR' }, { status: 500 });
+    // Erro genérico
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor. Tente novamente mais tarde.', 
+      code: 'INTERNAL_SERVER_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined
+    }, { status: 500 });
   }
 }
