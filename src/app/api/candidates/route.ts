@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {validateFormData} from "@/app/api/validateFormData";
-import {getClientIP} from "@/app/api/getClientIP";
-import {checkEmailExists} from "@/app/api/checkEmailExists";
+import {validateFormData} from "@/lib/utils/validation";
+import {getClientIP} from "@/lib/utils/ip";
+import {checkEmailExists} from "@/lib/database/checkEmail";
 import {insertOrUpdateCandidate} from "@/app/api/services/candidate";
 
 
