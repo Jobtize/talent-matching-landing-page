@@ -6,7 +6,13 @@ import { getPool } from '@/lib/database';
 export async function testDatabaseConnection(): Promise<{
   success: boolean;
   message: string;
-  details?: any;
+  details?: {
+    testQuery?: { test: number; current_time: Date };
+    server?: string;
+    database?: string;
+    timestamp: string;
+    error?: string;
+  };
 }> {
   try {
     console.log('🔄 Testando conexão com Azure SQL Database...');
