@@ -62,6 +62,13 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       const initGoogleMaps = async () => {
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
         
+        // Debug: log da chave da API (apenas primeiros caracteres por segurança)
+        console.log('🗺️ Google Maps API Key status:', {
+          hasKey: !!apiKey,
+          keyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : 'não encontrada',
+          nodeEnv: process.env.NODE_ENV
+        });
+        
         if (!apiKey) {
           console.warn('Google Maps API key not found. Using fallback mode.')
           return

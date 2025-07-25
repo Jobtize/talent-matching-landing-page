@@ -8,6 +8,7 @@ interface EnvironmentConfig {
   AZURE_SQL_USERNAME: string;
   AZURE_SQL_PASSWORD: string;
   NEXT_PUBLIC_APP_URL?: string;
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?: string;
 }
 
 /**
@@ -57,7 +58,8 @@ export function validateEnvironmentVariables(): {
       AZURE_SQL_DATABASE: process.env.AZURE_SQL_DATABASE!,
       AZURE_SQL_USERNAME: process.env.AZURE_SQL_USERNAME!,
       AZURE_SQL_PASSWORD: process.env.AZURE_SQL_PASSWORD!,
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     } : undefined
   };
 
