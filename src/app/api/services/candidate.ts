@@ -1,6 +1,6 @@
 import sql from 'mssql';
 import { executeTransaction } from '@/lib/database';
-import {USER_AGENT_MAX_LENGTH} from "@/app/api/constants";
+import { USER_AGENT_MAX_LENGTH } from "@/app/api/constants";
 
 interface FormData {
     nome: string;
