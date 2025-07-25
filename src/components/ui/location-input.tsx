@@ -66,7 +66,8 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
         console.log('🗺️ Google Maps API Key status:', {
           hasKey: !!apiKey,
           keyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : 'não encontrada',
-          nodeEnv: process.env.NODE_ENV
+          nodeEnv: process.env.NODE_ENV,
+          buildTime: 'Rebuild triggered to include environment variables'
         });
         
         if (!apiKey) {
