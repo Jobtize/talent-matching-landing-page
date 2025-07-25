@@ -6,8 +6,24 @@ import React from 'react';
  * Componente de debug para verificar variáveis de ambiente no cliente
  * REMOVER EM PRODUÇÃO - apenas para debugging
  */
+interface EnvData {
+  client: {
+    NEXT_PUBLIC_APP_URL: string;
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: string;
+    NODE_ENV: string;
+    isClient: boolean;
+  };
+  server: {
+    NEXT_PUBLIC_APP_URL?: string;
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?: string;
+    NODE_ENV?: string;
+    isServer?: boolean;
+    error?: string;
+  };
+}
+
 export function EnvDebug() {
-  const [envData, setEnvData] = React.useState<any>(null);
+  const [envData, setEnvData] = React.useState<EnvData | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
