@@ -28,8 +28,26 @@ let pool: sql.ConnectionPool | null = null
  */
 export async function getPool(): Promise<sql.ConnectionPool> {
   if (!pool) {
-    pool = new sql.ConnectionPool(config)
-    await pool.connect()
+    // Validar se as variáveis de ambiente estão configuradas
+    if (!config.server || !config.database || !config.user || !config.password) {
+      const missingVars = []
+      if (!config.server) missingVars.push('AZURE_SQL_SERVER')
+      if (!config.database) missingVars.push('AZURE_SQL_DATABASE')
+      if (!config.user) missingVars.push('AZURE_SQL_USERNAME')
+      if (!config.password) missingVars.push('AZURE_SQL_PASSWORD')
+      
+      throw new Error(`Variáveis de ambiente do banco de dados não configuradas: ${missingVars.join(', ')}`)
+    }
+
+    try {
+      pool = new sql.ConnectionPool(config)
+      await pool.connect()
+      console.log('✅ Conexão com Azure SQL Database estabelecida com sucesso')
+    } catch (error) {
+      console.error('❌ Erro ao conectar com Azure SQL Database:', error)
+      pool = null
+      throw new Error(`Falha na conexão com o banco de dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    }
   }
   return pool
 }
