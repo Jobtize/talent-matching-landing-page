@@ -1,4 +1,5 @@
 import sql from 'mssql';
+import { getPool } from '@/lib/database';
 
 export interface CandidateData {
     id: number;
@@ -14,7 +15,8 @@ export interface CandidateData {
 }
 
 export async function checkEmailExists(email: string): Promise<CandidateData | null> {
-    const request = new sql.Request();
+    const pool = await getPool();
+    const request = new sql.Request(pool);
     request.input('email', sql.NVarChar(255), email.toLowerCase().trim());
 
     const result = await request.query(`
