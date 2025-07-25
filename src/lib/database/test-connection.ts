@@ -42,7 +42,7 @@ export async function testDatabaseConnection(): Promise<{
       success: false,
       message: `❌ Falha na conexão com o banco de dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
       details: {
-        error: error instanceof Error ? error.message : error,
+        error: error instanceof Error ? error.message : String(error),
         server: process.env.AZURE_SQL_SERVER || 'não configurado',
         database: process.env.AZURE_SQL_DATABASE || 'não configurado',
         timestamp: new Date().toISOString()
