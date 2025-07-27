@@ -1,18 +1,58 @@
+import { z } from 'zod';
+
 /**
- * Validação de variáveis de ambiente necessárias para a aplicação
+ * Validação de variáveis de ambiente necessárias para a aplicação usando Zod
  */
 
-interface EnvironmentConfig {
-  AZURE_SQL_SERVER: string;
-  AZURE_SQL_DATABASE: string;
-  AZURE_SQL_USERNAME: string;
-  AZURE_SQL_PASSWORD: string;
-  NEXT_PUBLIC_APP_URL?: string;
-  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?: string;
-}
+// Schema para validação das variáveis de ambiente
+const environmentSchema = z.object({
+  // Variáveis obrigatórias do Azure SQL
+  AZURE_SQL_SERVER: z
+    .string()
+    .min(1, 'AZURE_SQL_SERVER é obrigatório')
+    .refine(
+      (val) => val.includes('.database.windows.net'),
+      'AZURE_SQL_SERVER deve ser um servidor Azure SQL válido (ex: server.database.windows.net)'
+    ),
+  
+  AZURE_SQL_DATABASE: z
+    .string()
+    .min(1, 'AZURE_SQL_DATABASE é obrigatório'),
+  
+  AZURE_SQL_USERNAME: z
+    .string()
+    .min(1, 'AZURE_SQL_USERNAME é obrigatório'),
+  
+  AZURE_SQL_PASSWORD: z
+    .string()
+    .min(8, 'AZURE_SQL_PASSWORD deve ter pelo menos 8 caracteres'),
+
+  // Variáveis opcionais do cliente
+  NEXT_PUBLIC_APP_URL: z
+    .string()
+    .url('NEXT_PUBLIC_APP_URL deve ser uma URL válida')
+    .optional(),
+  
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: z
+    .string()
+    .min(1, 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY não pode estar vazio')
+    .refine(
+      (val) => val.startsWith('AIza'),
+      'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY deve começar com "AIza" (formato válido do Google)'
+    )
+    .optional(),
+
+  // Variáveis de ambiente do Node.js
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development')
+});
+
+// Tipo inferido do schema
+export type EnvironmentConfig = z.infer<typeof environmentSchema>;
 
 /**
- * Valida se todas as variáveis de ambiente necessárias estão configuradas
+ * Valida se todas as variáveis de ambiente necessárias estão configuradas usando Zod
  */
 export function validateEnvironmentVariables(): {
   isValid: boolean;
@@ -20,50 +60,94 @@ export function validateEnvironmentVariables(): {
   config?: EnvironmentConfig;
   errors: string[];
 } {
-  const requiredVars = [
-    'AZURE_SQL_SERVER',
-    'AZURE_SQL_DATABASE', 
-    'AZURE_SQL_USERNAME',
-    'AZURE_SQL_PASSWORD'
-  ];
+  try {
+    // Tentar validar as variáveis de ambiente
+    const config = environmentSchema.parse(process.env);
+    
+    return {
+      isValid: true,
+      missingVars: [],
+      errors: [],
+      config
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const missingVars: string[] = [];
+      const errors: string[] = [];
 
-  const missingVars: string[] = [];
-  const errors: string[] = [];
+      // Processar erros do Zod
+      error.errors.forEach((err) => {
+        const fieldName = err.path.join('.');
+        
+        if (err.code === 'invalid_type' && err.received === 'undefined') {
+          missingVars.push(fieldName);
+        } else {
+          errors.push(`${fieldName}: ${err.message}`);
+        }
+      });
 
-  // Verifica variáveis obrigatórias
-  for (const varName of requiredVars) {
-    const value = process.env[varName];
-    if (!value || value.trim() === '') {
-      missingVars.push(varName);
+      return {
+        isValid: false,
+        missingVars,
+        errors,
+        config: undefined
+      };
     }
+
+    // Erro inesperado
+    return {
+      isValid: false,
+      missingVars: [],
+      errors: [`Erro inesperado na validação: ${error}`],
+      config: undefined
+    };
   }
+}
 
-  // Validações específicas
-  if (process.env.AZURE_SQL_SERVER && !process.env.AZURE_SQL_SERVER.includes('.database.windows.net')) {
-    errors.push('AZURE_SQL_SERVER deve ser um servidor Azure SQL válido (ex: server.database.windows.net)');
-  }
+/**
+ * Valida apenas as variáveis de ambiente do cliente (NEXT_PUBLIC_*)
+ * Útil para validação no lado do cliente
+ */
+export function validateClientEnvironmentVariables(): {
+  isValid: boolean;
+  errors: string[];
+  config?: Pick<EnvironmentConfig, 'NEXT_PUBLIC_APP_URL' | 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'>;
+} {
+  const clientSchema = environmentSchema.pick({
+    NEXT_PUBLIC_APP_URL: true,
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: true
+  });
 
-  if (process.env.AZURE_SQL_PASSWORD && process.env.AZURE_SQL_PASSWORD.length < 8) {
-    errors.push('AZURE_SQL_PASSWORD deve ter pelo menos 8 caracteres');
-  }
-
-  const isValid = missingVars.length === 0 && errors.length === 0;
-
-  const result = {
-    isValid,
-    missingVars,
-    errors,
-    config: isValid ? {
-      AZURE_SQL_SERVER: process.env.AZURE_SQL_SERVER!,
-      AZURE_SQL_DATABASE: process.env.AZURE_SQL_DATABASE!,
-      AZURE_SQL_USERNAME: process.env.AZURE_SQL_USERNAME!,
-      AZURE_SQL_PASSWORD: process.env.AZURE_SQL_PASSWORD!,
+  try {
+    const config = clientSchema.parse({
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    } : undefined
-  };
+    });
 
-  return result;
+    return {
+      isValid: true,
+      errors: [],
+      config
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errors = error.errors.map(err => 
+        `${err.path.join('.')}: ${err.message}`
+      );
+
+      return {
+        isValid: false,
+        errors,
+        config: undefined
+      };
+    }
+
+    return {
+      isValid: false,
+      errors: [`Erro inesperado na validação: ${error}`],
+      config: undefined
+    };
+  }
 }
 
 /**
@@ -101,8 +185,9 @@ export function validateAndLogEnvironment(): boolean {
 
 /**
  * Middleware para validar variáveis de ambiente em rotas da API
+ * Lança erro se as variáveis não estiverem configuradas corretamente
  */
-export function requireEnvironmentVariables() {
+export function requireEnvironmentVariables(): EnvironmentConfig {
   const validation = validateEnvironmentVariables();
   
   if (!validation.isValid) {
@@ -116,4 +201,51 @@ export function requireEnvironmentVariables() {
   }
 
   return validation.config!;
+}
+
+/**
+ * Função utilitária para obter configuração validada de forma segura
+ * Retorna null se a validação falhar (não lança erro)
+ */
+export function getValidatedEnvironmentConfig(): EnvironmentConfig | null {
+  const validation = validateEnvironmentVariables();
+  return validation.isValid ? validation.config! : null;
+}
+
+/**
+ * Valida especificamente a chave da API do Google Maps
+ * Útil para componentes que dependem do Google Maps
+ */
+export function validateGoogleMapsApiKey(): {
+  isValid: boolean;
+  apiKey?: string;
+  error?: string;
+} {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  
+  if (!apiKey) {
+    return {
+      isValid: false,
+      error: 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY não está configurada'
+    };
+  }
+
+  if (!apiKey.startsWith('AIza')) {
+    return {
+      isValid: false,
+      error: 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY deve começar com "AIza" (formato válido do Google)'
+    };
+  }
+
+  if (apiKey.length < 20) {
+    return {
+      isValid: false,
+      error: 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY parece ser muito curta para ser válida'
+    };
+  }
+
+  return {
+    isValid: true,
+    apiKey
+  };
 }
