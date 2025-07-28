@@ -27,6 +27,9 @@ interface SearchNearbyResult {
   places?: GooglePlaceResult[]
 }
 
+// Coordenadas do centro geográfico do Brasil
+const BRAZIL_CENTER = { lat: -14.2350, lng: -51.9253 }
+
 const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
   ({ value, onChange, placeholder, className }, ref) => {
     // Estados locais
@@ -105,6 +108,14 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       onSelect: handleSuggestionSelect,
       onClose: () => setShowSuggestions(false)
     })
+
+    // Função para verificar se há localização válida
+    const hasValidLocation = React.useCallback(() => {
+      return Boolean(
+        selectedLocation || 
+        (inputValue && inputValue.trim() !== '' && inputValue !== placeholder)
+      )
+    }, [selectedLocation, inputValue, placeholder])
 
     // Debug: log da chave da API (apenas primeiros caracteres por segurança)
     React.useEffect(() => {
@@ -287,12 +298,12 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     // Controlar exibição automática do mapa baseado na localização
     React.useEffect(() => {
       if (autoShowMap) {
-        // Mostrar mapa se há localização ou valor no input (mas não vazio)
-        const hasLocation = Boolean(selectedLocation || (inputValue && inputValue.trim() !== '' && inputValue !== placeholder))
+        // Só mostrar mapa automaticamente se há localização válida
+        const hasLocation = hasValidLocation()
         console.log('Auto map control:', { hasLocation, selectedLocation, inputValue, autoShowMap })
         setShowMap(hasLocation)
       }
-    }, [selectedLocation, inputValue, autoShowMap, placeholder])
+    }, [selectedLocation, inputValue, autoShowMap, hasValidLocation])
 
     return (
       <div ref={ref} className={cn("relative", className)}>
@@ -326,7 +337,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                 <div className="flex items-center">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       if (autoShowMap) {
                         // Se está em modo automático, desabilitar e alternar manualmente
                         setAutoShowMap(false)
@@ -334,6 +345,22 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                       } else {
                         // Se está em modo manual, apenas alternar
                         setShowMap(!showMap)
+                      }
+                      
+                      // Se está abrindo o mapa manualmente e não há localização válida,
+                      // inicializar com centro do Brasil
+                      if (!showMap && !hasValidLocation() && mapRef.current) {
+                        try {
+                          if (!mapIntegration.mapInstance) {
+                            await mapIntegration.initializeMap(mapRef.current, BRAZIL_CENTER)
+                          } else {
+                            mapIntegration.centerMap(BRAZIL_CENTER)
+                          }
+                          // Não adicionar marcador quando mostrar centro do Brasil
+                          mapIntegration.clearMarker()
+                        } catch (error) {
+                          console.error('Error initializing map with Brazil center:', error)
+                        }
                       }
                     }}
                     className={`p-1 transition-colors ${
@@ -358,7 +385,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                       onClick={() => {
                         setAutoShowMap(true)
                         // Reativar comportamento automático
-                        const hasLocation = Boolean(selectedLocation || (inputValue && inputValue.trim() !== ''))
+                        const hasLocation = hasValidLocation()
                         setShowMap(hasLocation)
                       }}
                       className="p-1 text-xs text-gray-400 hover:text-blue-600 transition-colors ml-1"
