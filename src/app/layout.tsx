@@ -5,12 +5,12 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'TalentMatch - Deixe as vagas encontrarem você',
+  title: 'Jobtize - Deixe as vagas encontrarem você',
   description: 'Plataforma inteligente de recrutamento que conecta talentos às melhores oportunidades de carreira.',
   keywords: 'recrutamento, vagas, emprego, carreira, talentos',
-  authors: [{ name: 'TalentMatch' }],
+  authors: [{ name: 'Jobtize' }],
   openGraph: {
-    title: 'TalentMatch - Deixe as vagas encontrarem você',
+    title: 'Jobtize - Deixe as vagas encontrarem você',
     description: 'Plataforma inteligente de recrutamento que conecta talentos às melhores oportunidades de carreira.',
     type: 'website',
   },

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { LocationInput } from '@/components/ui/location-input'
 import { TagInput } from '@/components/ui/tag-input'
+import { JobtizeLogo } from '@/components/ui/jobtize-logo'
 import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
@@ -54,7 +55,7 @@ interface PendingFormData {
   tecnologias: string
 }
 
-export default function TalentMatchLanding() {
+export default function JobtizeLanding() {
   const [formData, setFormData] = useState<FormData>({
     nome: '',
     email: '',
@@ -264,10 +265,8 @@ export default function TalentMatchLanding() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">TalentMatch</span>
+              <JobtizeLogo width={32} height={32} />
+              <span className="text-xl font-bold text-gray-900">Jobtize</span>
             </div>
             <nav className="hidden md:flex space-x-8">
               <a href="#como-funciona" className="text-gray-600 hover:text-blue-600 transition-colors">
@@ -638,10 +637,8 @@ export default function TalentMatchLanding() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold">TalentMatch</span>
+              <JobtizeLogo width={32} height={32} />
+              <span className="text-xl font-bold">Jobtize</span>
             </div>
             <p className="text-gray-400 mb-8">
               Conectando talentos às melhores oportunidades de carreira
