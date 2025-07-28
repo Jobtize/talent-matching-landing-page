@@ -243,13 +243,17 @@ export function useLocationSearch(options: UseLocationSearchOptions = {}): UseLo
         requestedLanguage: 'pt-BR'
       });
 
-      await (place as unknown as {
-        fetchFields: (options: { fields: string[] }) => Promise<void>;
+      // A nova API do Google Maps retorna um objeto com a propriedade place
+      const result = await (place as unknown as {
+        fetchFields: (options: { fields: string[] }) => Promise<{ place: unknown }>;
       }).fetchFields({
         fields: ['location', 'formattedAddress']
       });
+      
+      // Usar o place do resultado se disponível
+      const actualPlace = result?.place || place;
 
-      const placeData = place as unknown as {
+      const placeData = actualPlace as unknown as {
         location?: {
           lat: () => number;
           lng: () => number;

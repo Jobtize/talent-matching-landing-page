@@ -190,7 +190,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       const map = new google.maps.Map(element, mapOptions);
       setMapInstance(map);
       setIsInitializing(false);
-    } catch (error) {
+    } catch {
       const errorMsg = 'Erro ao inicializar o mapa';
       setError(errorMsg);
       setIsInitializing(false);
