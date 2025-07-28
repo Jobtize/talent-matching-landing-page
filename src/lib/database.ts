@@ -3,6 +3,7 @@ import sql from 'mssql'
 // Configuração da conexão com Azure SQL Database
 const config: sql.config = {
   server: process.env.AZURE_SQL_SERVER || '',
+  port: 1433, // Porta padrão do SQL Server
   database: process.env.AZURE_SQL_DATABASE || '',
   user: process.env.AZURE_SQL_USERNAME || '',
   password: process.env.AZURE_SQL_PASSWORD || '',

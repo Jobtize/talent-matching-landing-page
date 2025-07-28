@@ -87,12 +87,12 @@ export function useLocationSearch(options: UseLocationSearchOptions = {}): UseLo
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const resetAbortController = () => {
+  const resetAbortController = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
-  };
+  }, []);
   // Verificar se Google Maps está carregado
   useEffect(() => {
     const checkGoogleMaps = () => {
@@ -123,13 +123,8 @@ export function useLocationSearch(options: UseLocationSearchOptions = {}): UseLo
       return;
     }
 
-    // Cancelar busca anterior se existir
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Criar novo AbortController para esta busca
-    abortControllerRef.current = new AbortController();
+    // Cancelar busca anterior e criar novo AbortController
+    resetAbortController();
 
     try {
       setError(null);
@@ -188,7 +183,7 @@ export function useLocationSearch(options: UseLocationSearchOptions = {}): UseLo
       setSuggestions([]);
       setIsLoading(false);
     }
-  }, [isGoogleMapsReady, locationBias, maxResults]);
+  }, [isGoogleMapsReady, locationBias, maxResults, resetAbortController]);
 
   const searchLocations = useCallback((query: string) => {
     // Limpar timeout anterior
@@ -267,21 +262,7 @@ export function useLocationSearch(options: UseLocationSearchOptions = {}): UseLo
         formattedAddress?: string;
       }
 
-      const typedPlace = place as Place;
-
-      await typedPlace.fetchFields({
-        fields: ['location', 'formattedAddress']
-      });
-
-      if (typedPlace.location) {
-        return {
-          location: {
-            lat: typedPlace.location.lat(),
-            lng: typedPlace.location.lng()
-          },
-          formattedAddress: typedPlace.formattedAddress || ''
-        };
-      }
+      // Usar os dados já processados do placeData
       if (placeData.location) {
         return {
           location: {
