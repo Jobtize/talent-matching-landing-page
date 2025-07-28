@@ -251,7 +251,7 @@ export function useLocationSearch(options: UseLocationSearchOptions = {}): UseLo
       });
       
       // Usar o place do resultado se disponível
-      const actualPlace = result?.place || place;
+      const actualPlace = result && 'place' in result ? result.place : place;
 
       const placeData = actualPlace as unknown as {
         location?: {
