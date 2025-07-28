@@ -27,6 +27,8 @@ jobs:
       - name: Update npm to latest version
         run: npm install -g npm@latest
       - name: npm install, build, and test
+        env:
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
         run: |
           npm install
           npm run build
