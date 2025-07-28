@@ -149,7 +149,7 @@ export default function NextPublicDebug() {
         </p>
       </div>
 
-      {/* Análise do Cliente */}
+      {/* Analise do Cliente */}
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <h3 className="text-lg font-semibold text-green-900 mb-3">
           📱 Lado Cliente (Browser)
@@ -179,7 +179,7 @@ export default function NextPublicDebug() {
         </div>
       </div>
 
-      {/* Análise do Servidor */}
+      {/* Analise do Servidor */}
       {serverData && (
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-purple-900 mb-3">
@@ -211,7 +211,7 @@ export default function NextPublicDebug() {
         </div>
       )}
 
-      {/* Comparação */}
+      {/* Comparacao */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <h3 className="text-lg font-semibold text-yellow-900 mb-3">
           🔄 Comparação Cliente vs Servidor
@@ -240,7 +240,7 @@ export default function NextPublicDebug() {
         </div>
       </div>
 
-      {/* Explicação Técnica */}
+      {/* Explicacao Tecnica */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">
           📚 Como Funciona o NEXT_PUBLIC_*
