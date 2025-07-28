@@ -87,6 +87,12 @@ export function useLocationSearch(options: UseLocationSearchOptions = {}): UseLo
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const resetAbortController = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+  };
   // Verificar se Google Maps está carregado
   useEffect(() => {
     const checkGoogleMaps = () => {
