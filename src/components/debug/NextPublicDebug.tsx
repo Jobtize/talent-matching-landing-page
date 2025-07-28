@@ -145,22 +145,22 @@ export default function NextPublicDebug() {
           <div>
             <h4 className="font-medium text-green-800 mb-2">🔓 Variáveis NEXT_PUBLIC_* (Acessíveis)</h4>
             <pre className="bg-green-100 p-3 rounded text-sm overflow-x-auto">
-              {JSON.stringify(debugData?.clientSide.nextPublicVars, null, 2)}
-            </pre>
+  {JSON.stringify(debugData?.clientSide.nextPublicVars as Record<string, unknown>, null, 2)}
+</pre>
           </div>
           
           <div>
             <h4 className="font-medium text-green-800 mb-2">🔒 Variáveis Privadas (Devem ser undefined)</h4>
             <pre className="bg-green-100 p-3 rounded text-sm overflow-x-auto">
-              {JSON.stringify(debugData?.clientSide.privateVarsTest, null, 2)}
-            </pre>
+  {JSON.stringify(debugData?.clientSide.privateVarsTest as Record<string, unknown>, null, 2)}
+</pre>
           </div>
           
           <div>
             <h4 className="font-medium text-green-800 mb-2">🗺️ Análise Google Maps Key</h4>
             <pre className="bg-green-100 p-3 rounded text-sm overflow-x-auto">
-              {JSON.stringify(debugData?.clientSide.googleMapsAnalysis, null, 2)}
-            </pre>
+  {JSON.stringify(debugData?.clientSide.googleMapsAnalysis as Record<string, unknown>, null, 2)}
+</pre>
           </div>
         </div>
       </div>
