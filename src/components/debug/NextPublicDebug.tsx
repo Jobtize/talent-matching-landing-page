@@ -37,6 +37,20 @@ interface DebugData {
   };
 }
 
+interface ServerData {
+  data: {
+    nextPublicVars: Record<string, string | undefined>;
+    privateVars: Record<string, string | undefined>;
+    googleMapsAnalysis: {
+      exists: boolean;
+      length: number;
+      preview: string;
+      type: string;
+      rawValue: string | undefined;
+    };
+  };
+}
+
 export default function NextPublicDebug() {
   const [debugData, setDebugData] = useState<DebugData | null>(null);
   const [serverData, setServerData] = useState<ServerData | null>(null);
@@ -168,6 +182,8 @@ export default function NextPublicDebug() {
               <h4 className="font-medium text-purple-800 mb-2">🔓 Variáveis NEXT_PUBLIC_*</h4>
               <pre className="bg-purple-100 p-3 rounded text-sm overflow-x-auto">
                 {JSON.stringify(serverData.data.nextPublicVars, null, 2)}
+</pre>
+            </div>
               </pre>
             </div>
             
@@ -175,6 +191,8 @@ export default function NextPublicDebug() {
               <h4 className="font-medium text-purple-800 mb-2">🔒 Variáveis Privadas</h4>
               <pre className="bg-purple-100 p-3 rounded text-sm overflow-x-auto">
                 {JSON.stringify(serverData.data.privateVars, null, 2)}
+</pre>
+            </div>
               </pre>
             </div>
             
@@ -182,6 +200,8 @@ export default function NextPublicDebug() {
               <h4 className="font-medium text-purple-800 mb-2">🗺️ Análise Google Maps Key</h4>
               <pre className="bg-purple-100 p-3 rounded text-sm overflow-x-auto">
                 {JSON.stringify(serverData.data.googleMapsAnalysis, null, 2)}
+</pre>
+            </div>
               </pre>
                 </div>
               </div>
