@@ -2,6 +2,21 @@
 
 import { useEffect, useState } from 'react';
 
+interface ServerData {
+  data: {
+    nextPublicVars: Record<string, string | undefined>;
+    privateVars: Record<string, string | undefined>;
+    googleMapsAnalysis: {
+      exists: boolean;
+      length: number;
+      preview: string;
+      type: string;
+      isAccessibleOnServer: boolean;
+      rawValue: string | undefined;
+    };
+  };
+}
+
 interface DebugData {
   clientSide: {
     nextPublicVars: Record<string, string | undefined>;
@@ -20,12 +35,11 @@ interface DebugData {
       location: string;
     };
   };
-  serverSide?: unknown;
 }
 
 export default function NextPublicDebug() {
   const [debugData, setDebugData] = useState<DebugData | null>(null);
-  const [serverData, setServerData] = useState<unknown>(null);
+  const [serverData, setServerData] = useState<ServerData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -105,7 +119,7 @@ export default function NextPublicDebug() {
       // Log comparativo
       console.log('🔄 [COMPARISON] Cliente vs Servidor:');
       console.log('Cliente - Google Maps Key:', clientAnalysis.clientSide.googleMapsAnalysis.rawValue);
-      console.log('Servidor - Google Maps Key:', (serverAnalysis as { data?: { googleMapsAnalysis?: { rawValue?: string } } })?.data?.googleMapsAnalysis?.rawValue);
+      console.log('Servidor - Google Maps Key:', (serverAnalysis as ServerData)?.data?.googleMapsAnalysis?.rawValue);
     };
     
     runAnalysis();
@@ -166,7 +180,7 @@ export default function NextPublicDebug() {
       </div>
 
       {/* Análise do Servidor */}
-      {serverData && (serverData as { data: { nextPublicVars: unknown; privateVars: unknown; googleMapsAnalysis: unknown } }) && (
+      {serverData && (
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-purple-900 mb-3">
             🖥️ Lado Servidor (Node.js)
@@ -176,21 +190,21 @@ export default function NextPublicDebug() {
             <div>
               <h4 className="font-medium text-purple-800 mb-2">🔓 Variáveis NEXT_PUBLIC_*</h4>
               <pre className="bg-purple-100 p-3 rounded text-sm overflow-x-auto">
-                {JSON.stringify((serverData as { data: { nextPublicVars: unknown } }).data.nextPublicVars, null, 2)}
+                {JSON.stringify(serverData.data.nextPublicVars, null, 2)}
               </pre>
             </div>
             
             <div>
               <h4 className="font-medium text-purple-800 mb-2">🔒 Variáveis Privadas</h4>
               <pre className="bg-purple-100 p-3 rounded text-sm overflow-x-auto">
-                {JSON.stringify((serverData as { data: { privateVars: unknown } }).data.privateVars, null, 2)}
+                {JSON.stringify(serverData.data.privateVars, null, 2)}
               </pre>
             </div>
             
             <div>
               <h4 className="font-medium text-purple-800 mb-2">🗺️ Análise Google Maps Key</h4>
               <pre className="bg-purple-100 p-3 rounded text-sm overflow-x-auto">
-                {JSON.stringify((serverData as { data: { googleMapsAnalysis: unknown } }).data.googleMapsAnalysis, null, 2)}
+                {JSON.stringify(serverData.data.googleMapsAnalysis, null, 2)}
               </pre>
             </div>
           </div>
