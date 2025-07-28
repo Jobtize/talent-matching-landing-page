@@ -76,10 +76,10 @@ export function validateEnvironmentVariables(): {
       const errors: string[] = [];
 
       // Processar erros do Zod
-      error.errors.forEach((err) => {
+      error.issues.forEach((err) => {
         const fieldName = err.path.join('.');
         
-        if (err.code === 'invalid_type' && err.received === 'undefined') {
+        if (err.code === 'invalid_type' && 'received' in err && err.received === 'undefined') {
           missingVars.push(fieldName);
         } else {
           errors.push(`${fieldName}: ${err.message}`);
@@ -131,7 +131,7 @@ export function validateClientEnvironmentVariables(): {
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(err => 
+      const errors = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       );
 
