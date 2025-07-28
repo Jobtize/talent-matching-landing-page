@@ -37,8 +37,8 @@ const environmentSchema = z.object({
     .string()
     .min(1, 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY não pode estar vazio')
     .refine(
-      (val) => val.startsWith('AIza'),
-      'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY deve começar com "AIza" (formato válido do Google)'
+      (val) => /^[A-Za-z0-9_-]{35,}$/.test(val),
+      'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY deve ser uma chave válida (formato alfanumérico com pelo menos 35 caracteres)'
     )
     .optional(),
 
