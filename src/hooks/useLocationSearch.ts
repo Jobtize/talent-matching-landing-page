@@ -249,20 +249,30 @@ export function useLocationSearch(options: UseLocationSearchOptions = {}): UseLo
         requestedLanguage: 'pt-BR'
       });
 
-      await (place as unknown as {
+      interface Place {
         fetchFields: (options: { fields: string[] }) => Promise<void>;
-      }).fetchFields({
-        fields: ['location', 'formattedAddress']
-      });
-
-      const placeData = place as unknown as {
         location?: {
           lat: () => number;
           lng: () => number;
         };
         formattedAddress?: string;
-      };
+      }
 
+      const typedPlace = place as Place;
+
+      await typedPlace.fetchFields({
+        fields: ['location', 'formattedAddress']
+      });
+
+      if (typedPlace.location) {
+        return {
+          location: {
+            lat: typedPlace.location.lat(),
+            lng: typedPlace.location.lng()
+          },
+          formattedAddress: typedPlace.formattedAddress || ''
+        };
+      }
       if (placeData.location) {
         return {
           location: {
