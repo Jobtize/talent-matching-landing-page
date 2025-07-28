@@ -3,6 +3,11 @@
 import * as React from "react"
 import { MapPin, Loader2, Navigation, Map } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useGeolocation } from "@/hooks/useGeolocation"
+import { useLocationSearch } from "@/hooks/useLocationSearch"
+import { useMapIntegration } from "@/hooks/useMapIntegration"
+import { SuggestionsList, useSuggestionsNavigation, type SuggestionData } from "./suggestions-list"
+import { validateGoogleMapsApiKey } from "@/lib/env-validation"
 
 export interface LocationInputProps {
   value: string
@@ -11,30 +16,11 @@ export interface LocationInputProps {
   className?: string
 }
 
-interface PlacePrediction {
-  description: string
-  place_id: string
-  structured_formatting: {
-    main_text: string
-    secondary_text: string
-  }
-}
-
-// Interfaces para tipos do Google Maps
-interface GooglePlace {
-  location?: {
-    lat: () => number
-    lng: () => number
-  }
-  formattedAddress?: string
-  fetchFields: (options: { fields: string[] }) => Promise<void>
-}
-
+// Interfaces para tipos do Google Maps (mantidas para compatibilidade)
 interface GooglePlaceResult {
   types?: string[]
-  displayName?: {
-    text?: string
-  }
+  displayName?: string
+  formattedAddress?: string
 }
 
 interface SearchNearbyResult {
@@ -43,394 +29,175 @@ interface SearchNearbyResult {
 
 const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
   ({ value, onChange, placeholder, className }, ref) => {
+    // Estados locais
     const [inputValue, setInputValue] = React.useState(value)
-    const [suggestions, setSuggestions] = React.useState<PlacePrediction[]>([])
     const [showSuggestions, setShowSuggestions] = React.useState(false)
-    const [isLoading, setIsLoading] = React.useState(false)
     const [showMap, setShowMap] = React.useState(false)
-    const [autoShowMap, setAutoShowMap] = React.useState(true) // Controla se deve mostrar automaticamente
+    const [autoShowMap, setAutoShowMap] = React.useState(true)
     const [selectedLocation, setSelectedLocation] = React.useState<{lat: number, lng: number} | null>(null)
-    const [googleMapsLoaded, setGoogleMapsLoaded] = React.useState(false)
     
+    // Refs
     const inputRef = React.useRef<HTMLInputElement>(null)
     const mapRef = React.useRef<HTMLDivElement>(null)
-    const mapInstance = React.useRef<google.maps.Map | null>(null)
-    const currentMarker = React.useRef<google.maps.Marker | null>(null)
 
-    // Inicializar Google Maps com Places API (New)
-    React.useEffect(() => {
-      const initGoogleMaps = async () => {
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-        
-        // Debug: log da chave da API (apenas primeiros caracteres por segurança)
-        console.log('🗺️ Google Maps API Key status:', {
-          hasKey: !!apiKey,
-          keyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : 'não encontrada',
-          nodeEnv: process.env.NODE_ENV,
-          buildTime: 'Rebuild triggered to include environment variables'
-        });
-        
-        if (!apiKey) {
-          console.warn('Google Maps API key not found. Using fallback mode.')
-          return
-        }
+    // Validação da API key
+    const googleMapsValidation = React.useMemo(() => validateGoogleMapsApiKey(), [])
+    
+    // Custom hooks
+    const geolocation = useGeolocation()
+    const locationSearch = useLocationSearch({
+      debounceMs: 300,
+      maxResults: 8
+    })
+    const mapIntegration = useMapIntegration({
+      apiKey: googleMapsValidation.apiKey
+    })
 
-        try {
-          // Carregar Google Maps dinamicamente (apenas uma vez)
-          if (!window.google && !document.querySelector('script[src*="maps.googleapis.com"]')) {
-            const script = document.createElement('script')
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&v=weekly`
-            script.async = true
-            script.defer = true
-            
-            await new Promise<void>((resolve, reject) => {
-              script.onload = () => resolve()
-              script.onerror = reject
-              document.head.appendChild(script)
-            })
-          }
-          
-          // Aguardar o Google Maps estar totalmente carregado
-          if (window.google && window.google.maps) {
-            setGoogleMapsLoaded(true)
-          } else {
-            // Aguardar um pouco mais se ainda não carregou
-            setTimeout(() => {
-              if (window.google && window.google.maps) {
-                setGoogleMapsLoaded(true)
-              }
-            }, 1000)
-          }
-        } catch (error) {
-          console.error('Error loading Google Maps:', error)
-        }
-      }
+    // Converter sugestões para o formato esperado pelo SuggestionsList
+    const suggestionData: SuggestionData[] = React.useMemo(() => 
+      locationSearch.suggestions.map(suggestion => ({
+        id: suggestion.place_id,
+        mainText: suggestion.structured_formatting.main_text,
+        secondaryText: suggestion.structured_formatting.secondary_text
+      })), [locationSearch.suggestions]
+    )
 
-      initGoogleMaps()
-    }, [])
-
-    // Busca de localizações usando Places API (New) apenas
-    const searchLocations = React.useCallback(async (query: string) => {
-      if (query.length < 2) {
-        setSuggestions([])
-        return
-      }
-
-      setIsLoading(true)
-
-      if (googleMapsLoaded && window.google) {
-        try {
-          // Usar Places API (New) - Text Search
-          const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
-          
-          const request = {
-            textQuery: query,
-            fields: ['displayName', 'formattedAddress', 'location', 'id'],
-            locationBias: {
-              center: { lat: -14.235, lng: -51.9253 }, // Centro do Brasil
-              radius: 50000 // 50km (máximo permitido)
-            },
-            maxResultCount: 8
-          }
-
-          const { places } = await (Place as unknown as { searchByText: (request: unknown) => Promise<{ places: unknown[] }> }).searchByText(request)
-
-          if (places && places.length > 0) {
-            const formattedSuggestions = places.map((place: unknown, index: number) => {
-              const p = place as { formattedAddress?: string; displayName?: string; id?: string }
-              return {
-                description: p.formattedAddress || p.displayName || '',
-                place_id: p.id || `place_${index}`,
-                structured_formatting: {
-                  main_text: p.displayName || '',
-                  secondary_text: p.formattedAddress || ''
-                }
-              }
-            })
-
-            setSuggestions(formattedSuggestions)
-          } else {
-            setSuggestions([])
-          }
-          
-          setIsLoading(false)
-        } catch (error) {
-          console.error('Error with Places API (New):', error)
-          setSuggestions([])
-          setIsLoading(false)
-        }
-      } else {
-        // Quando Google Maps não está disponível
-        setSuggestions([])
-        setIsLoading(false)
-      }
-    }, [googleMapsLoaded])
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value
-      setInputValue(newValue)
-      onChange(newValue)
-      
-      // Se o campo foi limpo, resetar localização e fechar mapa SEMPRE
-      if (newValue.trim() === '') {
-        console.log('Input cleared, resetting location and closing map')
-        setSelectedLocation(null)
-        clearPreviousMarker() // Limpar marcador do mapa
-        setShowMap(false) // Fechar mapa sempre, independente do modo
-        setSuggestions([])
-        setShowSuggestions(false)
-        return
-      }
-      
-      setShowSuggestions(true)
-      searchLocations(newValue)
-    }
-
-    const handleSuggestionClick = async (suggestion: PlacePrediction) => {
-      const selectedText = suggestion.description
+    // Função para lidar com seleção de sugestão
+    const handleSuggestionSelect = React.useCallback(async (suggestion: SuggestionData) => {
+      const selectedText = suggestion.mainText + (suggestion.secondaryText ? `, ${suggestion.secondaryText}` : '')
       setInputValue(selectedText)
       setShowSuggestions(false)
-      setSuggestions([])
+      onChange(selectedText)
       
-      // Obter coordenadas usando Places API (New)
-      if (googleMapsLoaded && window.google) {
-        try {
-          const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
-          
-          const place = new Place({
-            id: suggestion.place_id,
-            requestedLanguage: 'pt-BR'
-          })
-
-          await (place as unknown as GooglePlace).fetchFields({
-            fields: ['location', 'formattedAddress']
-          })
-
-          if ((place as unknown as GooglePlace).location) {
-            const location = {
-              lat: (place as unknown as GooglePlace).location!.lat(),
-              lng: (place as unknown as GooglePlace).location!.lng()
-            }
-            setSelectedLocation(location)
-            
-            // Abrir mapa automaticamente se estiver em modo automático
-            if (autoShowMap) {
-              setShowMap(true)
-            }
-            
-            // Inicializar mapa se ainda não foi criado
-            if (mapRef.current && !mapInstance.current) {
-              initializeMap(location)
-            } else if (mapInstance.current) {
-              // Atualizar mapa existente
-              mapInstance.current.setCenter(location)
-              addMarker(location, selectedText)
-            }
+      // Obter detalhes do local usando o hook de busca
+      const placeDetails = await locationSearch.getPlaceDetails(suggestion.id)
+      
+      if (placeDetails) {
+        setSelectedLocation(placeDetails.location)
+        
+        // Abrir mapa automaticamente se estiver em modo automático
+        if (autoShowMap) {
+          setShowMap(true)
+        }
+        
+        // Inicializar ou atualizar mapa
+        if (mapRef.current) {
+          if (!mapIntegration.mapInstance) {
+            await mapIntegration.initializeMap(mapRef.current, placeDetails.location)
+          } else {
+            mapIntegration.centerMap(placeDetails.location)
           }
-        } catch (error) {
-          console.error('Error getting place details with Places API (New):', error)
+          mapIntegration.addMarker(placeDetails.location, selectedText)
         }
       }
       
-      onChange(selectedText)
-      
-      // Foca no input após seleção
+      // Focar no input após seleção
       setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus()
         }
       }, 100)
-    }
+    }, [locationSearch, onChange, autoShowMap, mapIntegration])
 
-    // Função para limpar marcador anterior
-    const clearPreviousMarker = () => {
-      if (currentMarker.current) {
-        currentMarker.current.setMap(null)
-        currentMarker.current = null
-        console.log('Previous marker cleared')
+    // Hook para navegação por teclado
+    const suggestionsNavigation = useSuggestionsNavigation({
+      suggestions: suggestionData,
+      onSelect: handleSuggestionSelect,
+      onClose: () => setShowSuggestions(false)
+    })
+
+    // Debug: log da chave da API (apenas primeiros caracteres por segurança)
+    React.useEffect(() => {
+      if (googleMapsValidation.isValid) {
+        console.log('🗺️ Google Maps API Key status:', {
+          hasKey: true,
+          keyPreview: `${googleMapsValidation.apiKey!.substring(0, 10)}...`,
+          nodeEnv: process.env.NODE_ENV,
+          buildTime: 'Rebuild triggered to include environment variables'
+        });
+      } else {
+        console.log('🗺️ Google Maps API Key status:', {
+          hasKey: false,
+          error: googleMapsValidation.error,
+          nodeEnv: process.env.NODE_ENV
+        });
       }
-    }
+    }, [googleMapsValidation])
 
-    // Função para adicionar novo marcador
-    const addMarker = React.useCallback((position: {lat: number, lng: number}, title: string) => {
-      if (mapInstance.current) {
-        clearPreviousMarker() // Limpar marcador anterior
-        
-        currentMarker.current = new google.maps.Marker({
-          position,
-          map: mapInstance.current,
-          title
-        })
-        console.log('New marker added:', title)
-      }
-    }, [])
+    // Sincronizar valor do input com prop value
+    React.useEffect(() => {
+      setInputValue(value)
+    }, [value])
 
-    // Inicializar mapa
-    const initializeMap = React.useCallback((center: {lat: number, lng: number}) => {
-      if (!mapRef.current || !googleMapsLoaded || !window.google?.maps) {
-        console.log('Map initialization failed - missing requirements')
+    const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value
+      setInputValue(newValue)
+      onChange(newValue)
+      
+      // Se o campo foi limpo, resetar tudo
+      if (newValue.trim() === '') {
+        console.log('Input cleared, resetting location and closing map')
+        setSelectedLocation(null)
+        mapIntegration.clearMarker()
+        setShowMap(false)
+        locationSearch.clearSuggestions()
+        setShowSuggestions(false)
         return
       }
+      
+      // Mostrar sugestões e buscar localizações
+      setShowSuggestions(true)
+      locationSearch.searchLocations(newValue)
+    }, [onChange, mapIntegration, locationSearch])
 
+
+
+
+
+    // Obter localização atual usando o hook
+    const handleGetCurrentLocation = React.useCallback(async () => {
       try {
-        console.log('Initializing map with center:', center)
+        await geolocation.getCurrentLocation()
         
-        // Aguardar um pouco para garantir que o DOM está pronto
-        setTimeout(() => {
-          if (!mapRef.current) {
-            console.log('mapRef.current is null, aborting')
-            return
-          }
+        if (geolocation.coordinates) {
+          setSelectedLocation(geolocation.coordinates)
           
-          // Limpar qualquer instância anterior completamente
-          if (mapInstance.current) {
-            console.log('Clearing previous map instance')
+          // Tentar obter endereço próximo usando Places API
+          if (locationSearch.isGoogleMapsReady && window.google) {
             try {
-              google.maps.event.clearInstanceListeners(mapInstance.current)
-            } catch (e) {
-              console.log('Error clearing map listeners:', e)
-            }
-            mapInstance.current = null
-          }
-          
-          // Limpar o conteúdo do div do mapa
-          if (mapRef.current) {
-            mapRef.current.innerHTML = ''
-          }
-          
-          // Criar nova instância do mapa
-          mapInstance.current = new google.maps.Map(mapRef.current, {
-            center,
-            zoom: selectedLocation ? 13 : 5, // Zoom menor se não há localização específica
-            styles: [
-              {
-                featureType: "poi",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-              }
-            ]
-          })
-
-          // Aguardar o mapa carregar antes de adicionar marker
-          google.maps.event.addListenerOnce(mapInstance.current, 'idle', () => {
-            console.log('Map loaded successfully')
-            
-            // Só adicionar marker se há uma localização específica
-            if (selectedLocation) {
-              addMarker(center, inputValue || 'Localização')
-            }
-          })
-          
-          // Timeout de segurança caso o mapa não carregue
-          setTimeout(() => {
-            if (mapInstance.current) {
-              try {
-                const currentCenter = mapInstance.current.getCenter()
-                if (!currentCenter) {
-                  console.log('Map loading timeout, forcing center')
-                  mapInstance.current.setCenter(center)
-                }
-              } catch {
-                console.log('Error checking map center, forcing center')
-                mapInstance.current.setCenter(center)
-              }
-            }
-          }, 3000)
-        }, 300) // Aumentei o timeout para 300ms
-        
-      } catch (error) {
-        console.error('Error initializing map:', error)
-      }
-    }, [googleMapsLoaded, addMarker, inputValue, selectedLocation])
-
-    // Obter localização atual
-    const getCurrentLocation = () => {
-      if (!navigator.geolocation) {
-        alert('Geolocalização não é suportada pelo seu navegador')
-        return
-      }
-
-      setIsLoading(true)
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }
-          
-          setSelectedLocation(location)
-          
-          // Usar Places API (New) para encontrar o lugar mais próximo
-          if (googleMapsLoaded && window.google && window.google.maps) {
-            try {
-              // Verificar se importLibrary está disponível
-              if (!google.maps.importLibrary) {
-                console.error('importLibrary not available. Using fallback.')
-                const address = 'Minha localização atual'
-                setInputValue(address)
-                onChange(address)
-                
-                if (mapRef.current && !mapInstance.current) {
-                  initializeMap(location)
-                } else if (mapInstance.current) {
-                  mapInstance.current.setCenter(location)
-                  new google.maps.Marker({
-                    position: location,
-                    map: mapInstance.current,
-                    title: address
-                  })
-                }
-                setIsLoading(false)
-                return
-              }
-
               const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
               
-              // Buscar informações completas de localização
               const request = {
                 locationRestriction: {
-                  center: location,
-                  radius: 5000 // 5km de raio para pegar informações mais completas
+                  center: geolocation.coordinates,
+                  radius: 5000 // 5km de raio
                 },
                 includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1', 'country'],
-                maxResultCount: 10, // Pegar mais opções para montar endereço completo
+                maxResultCount: 10,
                 fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
               }
 
-              const result = await (Place as unknown as { searchNearby: (request: unknown) => Promise<SearchNearbyResult> }).searchNearby(request)
-              console.log('searchNearby result:', result)
-              console.log('searchNearby result.places length:', result?.places?.length)
-              console.log('searchNearby result details:', JSON.stringify(result, null, 2))
+              const result = await (Place as unknown as { 
+                searchNearby: (request: unknown) => Promise<SearchNearbyResult> 
+              }).searchNearby(request)
 
               let address = 'Minha localização atual'
-
-              // A API retorna {places: Array} não um array diretamente
               const places = result?.places
+
               if (places && Array.isArray(places) && places.length > 0) {
-                console.log('Processing places results...')
-                
                 // Procurar por diferentes tipos de localização
-                const locality = places.find((place: GooglePlaceResult) => {
-                  console.log('Checking place types:', place.types, 'for locality')
-                  return place.types?.includes('locality')
-                })
-                const adminLevel1 = places.find((place: GooglePlaceResult) => {
-                  console.log('Checking place types:', place.types, 'for admin_level_1')
-                  return place.types?.includes('administrative_area_level_1')
-                })
-                const adminLevel2 = places.find((place: GooglePlaceResult) => {
-                  console.log('Checking place types:', place.types, 'for admin_level_2')
-                  return place.types?.includes('administrative_area_level_2')
-                })
-                const country = places.find((place: GooglePlaceResult) => {
-                  console.log('Checking place types:', place.types, 'for country')
-                  return place.types?.includes('country')
-                })
-                
-                console.log('Found locality:', locality?.displayName)
-                console.log('Found adminLevel1:', adminLevel1?.displayName)
-                console.log('Found adminLevel2:', adminLevel2?.displayName)
-                console.log('Found country:', country?.displayName)
+                const locality = places.find((place: GooglePlaceResult) => 
+                  place.types?.includes('locality')
+                )
+                const adminLevel1 = places.find((place: GooglePlaceResult) => 
+                  place.types?.includes('administrative_area_level_1')
+                )
+                const adminLevel2 = places.find((place: GooglePlaceResult) => 
+                  place.types?.includes('administrative_area_level_2')
+                )
+                const country = places.find((place: GooglePlaceResult) => 
+                  place.types?.includes('country')
+                )
                 
                 // Montar endereço no formato "Cidade, Estado, País"
                 const addressParts = []
@@ -451,90 +218,71 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                 
                 if (addressParts.length > 0) {
                   address = addressParts.join(', ')
-                  console.log('Using formatted address:', address)
                 } else {
                   // Usar o primeiro resultado disponível como fallback
-                  const firstPlace = places[0] as { formattedAddress?: string; displayName?: string; types?: string[] }
+                  const firstPlace = places[0] as { formattedAddress?: string; displayName?: string }
                   address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
-                  console.log('Using first place fallback:', address, 'types:', firstPlace.types)
                 }
-              } else {
-                console.log('No places found, using fallback')
               }
 
               setInputValue(address)
               onChange(address)
-              
-              // Abrir mapa automaticamente se estiver em modo automático
-              if (autoShowMap) {
-                setShowMap(true)
-              }
-              
-              if (mapRef.current && !mapInstance.current) {
-                initializeMap(location)
-              } else if (mapInstance.current) {
-                mapInstance.current.setCenter(location)
-                addMarker(location, address)
-              }
-              
-              setIsLoading(false)
             } catch (error) {
-              console.error('Error with Places API (New) searchNearby:', error)
-              // Fallback amigável se a API falhar
+              console.error('Error with Places API searchNearby:', error)
               const address = 'Minha localização atual'
               setInputValue(address)
               onChange(address)
-              
-              // Abrir mapa automaticamente se estiver em modo automático
-              if (autoShowMap) {
-                setShowMap(true)
-              }
-              
-              if (mapRef.current && !mapInstance.current) {
-                initializeMap(location)
-              } else if (mapInstance.current) {
-                mapInstance.current.setCenter(location)
-                addMarker(location, 'Minha localização')
-              }
-              
-              setIsLoading(false)
             }
           } else {
-            setIsLoading(false)
+            const address = 'Minha localização atual'
+            setInputValue(address)
+            onChange(address)
           }
-        },
-        (error) => {
-          console.error('Error getting location:', error)
-          alert('Erro ao obter localização')
-          setIsLoading(false)
+          
+          // Abrir mapa automaticamente se estiver em modo automático
+          if (autoShowMap) {
+            setShowMap(true)
+          }
+          
+          // Inicializar ou atualizar mapa
+          if (mapRef.current) {
+            if (!mapIntegration.mapInstance) {
+              await mapIntegration.initializeMap(mapRef.current, geolocation.coordinates)
+            } else {
+              mapIntegration.centerMap(geolocation.coordinates)
+            }
+            mapIntegration.addMarker(geolocation.coordinates, 'Minha localização')
+          }
         }
-      )
-    }
+      } catch (error) {
+        console.error('Error getting location:', error)
+        alert(geolocation.error || 'Erro ao obter localização')
+      }
+    }, [geolocation, locationSearch.isGoogleMapsReady, onChange, autoShowMap, mapIntegration])
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
+    const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+      // Usar navegação por teclado do hook
+      suggestionsNavigation.handleKeyDown(e)
+      
+      // Manter comportamento original para Enter quando não há sugestões
+      if (e.key === "Enter" && suggestionData.length === 0) {
         e.preventDefault()
         onChange(inputValue)
         setShowSuggestions(false)
-      } else if (e.key === "Escape") {
-        setShowSuggestions(false)
       }
-    }
+    }, [suggestionsNavigation, suggestionData.length, onChange, inputValue])
 
-    const handleBlur = () => {
+    const handleBlur = React.useCallback(() => {
       // Delay para permitir clique nas sugestões
       setTimeout(() => {
         setShowSuggestions(false)
+        suggestionsNavigation.resetHighlight()
         // Só atualiza se o valor mudou
         if (inputValue !== value) {
           onChange(inputValue)
         }
       }, 200)
-    }
-
-    React.useEffect(() => {
-      setInputValue(value)
-    }, [value])
+    }, [suggestionsNavigation, inputValue, value, onChange])
 
     // Controlar exibição automática do mapa baseado na localização
     React.useEffect(() => {
@@ -546,23 +294,6 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       }
     }, [selectedLocation, inputValue, autoShowMap, placeholder])
 
-    // Inicializar/limpar mapa quando showMap muda
-    React.useEffect(() => {
-      if (showMap && googleMapsLoaded && mapRef.current) {
-        if (!mapInstance.current) {
-          console.log('Initializing map from useEffect')
-          // Usar localização selecionada ou centro do Brasil como fallback
-          const defaultCenter = selectedLocation || { lat: -14.235, lng: -51.9253 }
-          initializeMap(defaultCenter)
-        }
-      } else if (!showMap && mapInstance.current) {
-        // Limpar instância do mapa quando fechado
-        console.log('Clearing map instance')
-        clearPreviousMarker() // Limpar marcador também
-        mapInstance.current = null
-      }
-    }, [showMap, googleMapsLoaded, selectedLocation, initializeMap])
-
     return (
       <div ref={ref} className={cn("relative", className)}>
         <div className="relative">
@@ -573,19 +304,19 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            onFocus={() => setShowSuggestions(suggestions.length > 0)}
+            onFocus={() => setShowSuggestions(suggestionData.length > 0)}
             onBlur={handleBlur}
             placeholder={placeholder}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 pr-24 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           />
           
           <div className="absolute right-2 top-2 flex items-center gap-1">
-            {googleMapsLoaded && (
+            {mapIntegration.isLoaded && (
               <>
                 <button
                   type="button"
-                  onClick={getCurrentLocation}
-                  disabled={isLoading}
+                  onClick={handleGetCurrentLocation}
+                  disabled={geolocation.isLoading}
                   className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                   title="Usar localização atual"
                 >
@@ -640,38 +371,22 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               </>
             )}
             
-            {isLoading && (
+            {(geolocation.isLoading || locationSearch.isLoading) && (
               <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
             )}
           </div>
         </div>
 
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-48 overflow-y-auto">
-            {suggestions.map((suggestion, index) => (
-              <div
-                key={suggestion.place_id || index}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  handleSuggestionClick(suggestion)
-                }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">
-                    {suggestion.structured_formatting.main_text}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {suggestion.structured_formatting.secondary_text}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <SuggestionsList
+          suggestions={suggestionData}
+          isVisible={showSuggestions}
+          onSuggestionSelect={handleSuggestionSelect}
+          highlightedIndex={suggestionsNavigation.highlightedIndex}
+          showEmptyMessage={locationSearch.isLoading}
+          emptyMessage={locationSearch.isLoading ? "Buscando..." : "Nenhuma localização encontrada"}
+        />
 
-        {showMap && googleMapsLoaded && (
+        {showMap && mapIntegration.isLoaded && (
           <div className="mt-2 border border-input rounded-md overflow-hidden">
             <div 
               ref={mapRef} 
@@ -681,9 +396,21 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           </div>
         )}
 
-        {!googleMapsLoaded && (
+        {!googleMapsValidation.isValid && (
           <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-            ⚠️ Para usar o autocomplete inteligente e o mapa, configure a chave da API do Google Maps.
+            ⚠️ {googleMapsValidation.error || 'Para usar o autocomplete inteligente e o mapa, configure a chave da API do Google Maps.'}
+          </div>
+        )}
+
+        {mapIntegration.error && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-800">
+            ❌ Erro ao carregar o mapa: {mapIntegration.error}
+          </div>
+        )}
+
+        {geolocation.error && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-800">
+            ❌ Erro de geolocalização: {geolocation.error}
           </div>
         )}
       </div>
