@@ -22,8 +22,8 @@ export const JobtizeLogo: React.FC<JobtizeLogoProps> = ({
         xmlns="http://www.w3.org/2000/svg"
         className="rounded-lg"
       >
-        {/* Fundo roxo */}
-        <rect width="100" height="100" rx="12" fill="#8B5CF6"/>
+        {/* Fundo azul - mesma cor das letras */}
+        <rect width="100" height="100" rx="12" fill="#2563EB"/>
         
         {/* Ícone de aperto de mão estilizado */}
         <g transform="translate(20, 25)">
@@ -63,4 +63,3 @@ export const JobtizeLogo: React.FC<JobtizeLogoProps> = ({
 }
 
 export default JobtizeLogo
-
