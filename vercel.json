@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "jobtize.com" }],
+      "destination": "https://www.jobtize.com/:1",
+      "permanent": true
+    }
+  ]
+}
