@@ -27,8 +27,8 @@ interface SearchNearbyResult {
   places?: GooglePlaceResult[]
 }
 
-// Coordenadas do centro geográfico do Brasil
-const BRAZIL_CENTER = { lat: -14.2350, lng: -51.9253 }
+// Coordenadas do centro de São Paulo (Praça da Sé)
+const SAO_PAULO_CENTER = { lat: -23.5505, lng: -46.6333 }
 
 const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
   ({ value, onChange, placeholder, className }, ref) => {
@@ -348,18 +348,18 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                       }
                       
                       // Se está abrindo o mapa manualmente e não há localização válida,
-                      // inicializar com centro do Brasil
+                      // inicializar com centro de São Paulo
                       if (!showMap && !hasValidLocation() && mapRef.current) {
                         try {
                           if (!mapIntegration.mapInstance) {
-                            await mapIntegration.initializeMap(mapRef.current, BRAZIL_CENTER)
+                            await mapIntegration.initializeMap(mapRef.current, SAO_PAULO_CENTER)
                           } else {
-                            mapIntegration.centerMap(BRAZIL_CENTER)
+                            mapIntegration.centerMap(SAO_PAULO_CENTER)
                           }
-                          // Não adicionar marcador quando mostrar centro do Brasil
+                          // Não adicionar marcador quando mostrar centro de São Paulo
                           mapIntegration.clearMarker()
                         } catch (error) {
-                          console.error('Error initializing map with Brazil center:', error)
+                          console.error('Error initializing map with São Paulo center:', error)
                         }
                       }
                     }}
