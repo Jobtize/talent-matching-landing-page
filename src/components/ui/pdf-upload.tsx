@@ -202,7 +202,7 @@ export default function PdfUpload({
           Apenas arquivos PDF, máximo 10MB cada
         </p>
         <p className="text-xs text-gray-400 mt-1">
-          Máximo {maxFiles} arquivos
+          Máximo {maxFiles} arquivo apenas
         </p>
       </div>
 
