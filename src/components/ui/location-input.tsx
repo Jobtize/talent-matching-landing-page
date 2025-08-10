@@ -141,64 +141,46 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       setInputValue(value)
     }, [value])
 
-    // Sempre recriar o mapa quando ele for aberto ou quando a localização mudar
+    // Gerenciar mapa: inicialização e atualizações de localização
     React.useEffect(() => {
       const initializeMap = async () => {
         if (showMap && mapRef.current && mapIntegration.isLoaded) {
-          // Capturar valores atuais no momento da execução
-          const currentHasValidLocation = hasValidLocation()
-          const currentSelectedLocation = selectedLocation
-          
-          // Verificar se a localização mudou desde a última vez que o mapa foi inicializado
-          const locationChanged = !lastMapLocation || 
-            !currentSelectedLocation ||
-            lastMapLocation.lat !== currentSelectedLocation.lat ||
-            lastMapLocation.lng !== currentSelectedLocation.lng
-          
-          console.log('🗺️ Inicializando mapa via useEffect')
+          console.log('🗺️ === INICIANDO MAPA ===')
           console.log('🗺️ MapRef atual:', mapRef.current)
           console.log('🗺️ MapIntegration isLoaded:', mapIntegration.isLoaded)
           console.log('🗺️ MapInstance existe:', !!mapIntegration.mapInstance)
-          console.log('🗺️ HasValidLocation:', currentHasValidLocation)
-          console.log('🗺️ SelectedLocation:', currentSelectedLocation)
+          console.log('🗺️ SelectedLocation:', selectedLocation)
           console.log('🗺️ LastMapLocation:', lastMapLocation)
-          console.log('🗺️ LocationChanged:', locationChanged)
           
           try {
             // SEMPRE recriar o mapa quando o elemento DOM for recriado
-            // Isso resolve o problema do mapa ficar branco na segunda vez
             console.log('🗺️ Limpando instância anterior e criando nova...')
             mapIntegration.clearMap()
             
-            if (currentHasValidLocation && currentSelectedLocation) {
-              // Se há localização válida, inicializar com ela
-              console.log('🗺️ Inicializando mapa com localização selecionada:', currentSelectedLocation)
-              await mapIntegration.initializeMap(mapRef.current, currentSelectedLocation)
+            // Determinar qual localização usar
+            let locationToUse = selectedLocation || SAO_PAULO_CENTER
+            let markerTitle = selectedLocation?.address || 'São Paulo - SP, Brasil'
+            
+            console.log('🗺️ Localização escolhida:', locationToUse)
+            console.log('🗺️ Título do marcador:', markerTitle)
+            
+            // Inicializar mapa
+            await mapIntegration.initializeMap(mapRef.current, locationToUse)
+            
+            // Atualizar última localização
+            setLastMapLocation(locationToUse)
+            
+            // Aguardar e adicionar marcador
+            setTimeout(() => {
+              console.log('📍 === ADICIONANDO MARCADOR ===')
+              console.log('📍 Posição:', locationToUse)
+              console.log('📍 Título:', markerTitle)
+              console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
+              console.log('📍 Google Maps disponível:', !!window.google)
               
-              // Atualizar a última localização usada no mapa
-              setLastMapLocation(currentSelectedLocation)
-              
-              // Aguardar um pouco para o mapa estar totalmente pronto
-              setTimeout(() => {
-                console.log('📍 Adicionando marcador na posição:', currentSelectedLocation)
-                console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
-                console.log('📍 Google Maps disponível:', !!window.google)
-                mapIntegration.addMarker(currentSelectedLocation, currentSelectedLocation.address || 'Localização selecionada')
-              }, 100)
-            } else {
-              // Se não há localização, inicializar com São Paulo
-              console.log('🗺️ Inicializando mapa com São Paulo:', SAO_PAULO_CENTER)
-              await mapIntegration.initializeMap(mapRef.current, SAO_PAULO_CENTER)
-              setLastMapLocation(SAO_PAULO_CENTER) // Definir São Paulo como última localização
-              
-              // Aguardar um pouco para o mapa estar totalmente pronto
-              setTimeout(() => {
-                console.log('📍 Adicionando marcador padrão em São Paulo:', SAO_PAULO_CENTER)
-                console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
-                console.log('📍 Google Maps disponível:', !!window.google)
-                mapIntegration.addMarker(SAO_PAULO_CENTER, 'São Paulo - SP, Brasil')
-              }, 100)
-            }
+              mapIntegration.addMarker(locationToUse, markerTitle)
+              console.log('📍 Marcador adicionado!')
+            }, 200) // Aumentar timeout para garantir que o mapa esteja pronto
             
             console.log('🗺️ Mapa inicializado com sucesso!')
           } catch (error) {
@@ -208,28 +190,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       }
 
       initializeMap()
-    }, [showMap, mapIntegration.isLoaded])
-
-    // Detectar mudanças de localização quando o mapa já está aberto
-    React.useEffect(() => {
-      if (showMap && mapRef.current && mapIntegration.isLoaded && selectedLocation) {
-        // Verificar se a localização mudou
-        const locationChanged = !lastMapLocation || 
-          lastMapLocation.lat !== selectedLocation.lat ||
-          lastMapLocation.lng !== selectedLocation.lng
-        
-        if (locationChanged) {
-          console.log('🔄 Localização mudou com mapa aberto, atualizando...')
-          console.log('🔄 Nova localização:', selectedLocation)
-          console.log('🔄 Localização anterior:', lastMapLocation)
-          
-          // Atualizar mapa para nova localização
-          mapIntegration.centerMap(selectedLocation)
-          mapIntegration.addMarker(selectedLocation, selectedLocation.address || 'Localização selecionada')
-          setLastMapLocation(selectedLocation)
-        }
-      }
-    }, [selectedLocation, showMap, mapIntegration.isLoaded, lastMapLocation, mapIntegration])
+    }, [showMap, mapIntegration.isLoaded, selectedLocation]) // Incluir selectedLocation nas dependências
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
