@@ -150,14 +150,13 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           console.log('🗺️ MapInstance existe:', !!mapIntegration.mapInstance)
           
           try {
-            if (!mapIntegration.mapInstance) {
-              console.log('🗺️ Criando nova instância do mapa...')
-              await mapIntegration.initializeMap(mapRef.current, SAO_PAULO_CENTER)
-              console.log('🗺️ Mapa inicializado com sucesso!')
-            } else {
-              console.log('🗺️ Centralizando mapa existente...')
-              mapIntegration.centerMap(SAO_PAULO_CENTER)
-            }
+            // SEMPRE recriar o mapa quando o elemento DOM for recriado
+            // Isso resolve o problema do mapa ficar branco na segunda vez
+            console.log('🗺️ Limpando instância anterior e criando nova...')
+            mapIntegration.clearMap()
+            await mapIntegration.initializeMap(mapRef.current, SAO_PAULO_CENTER)
+            console.log('🗺️ Mapa inicializado com sucesso!')
+            
             // Não adicionar marcador quando mostrar centro de São Paulo
             mapIntegration.clearMarker()
           } catch (error) {
