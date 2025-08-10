@@ -184,8 +184,17 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             console.log('🗺️ mapIntegration.initializeMap:', typeof mapIntegration.initializeMap)
             
             try {
-              await mapIntegration.initializeMap(mapRef.current, locationToUse)
+              const mapInstanceDirect = await mapIntegration.initializeMap(mapRef.current, locationToUse)
               console.log('🗺️ initializeMap retornou com sucesso')
+              console.log('🗺️ mapInstanceDirect:', !!mapInstanceDirect)
+              
+              // Se temos a instância direta, usar ela para adicionar o marcador
+              if (mapInstanceDirect) {
+                console.log('🗺️ Usando instância direta para adicionar marcador')
+                mapIntegration.addMarker(locationToUse, markerTitle)
+                console.log('🗺️ Marcador adicionado com instância direta!')
+                return // Sair da função, não precisamos do retry loop
+              }
             } catch (error) {
               console.error('🗺️ ERRO em initializeMap:', error)
               throw error

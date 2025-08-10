@@ -169,7 +169,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
   const initializeMap = useCallback(async (
     element: HTMLElement, 
     center: { lat: number; lng: number }
-  ): Promise<void> => {
+  ): Promise<google.maps.Map | null> => {
     console.log('🗺️ [HOOK] initializeMap chamado')
     console.log('🗺️ [HOOK] isLoaded:', isLoaded)
     console.log('🗺️ [HOOK] element:', element)
@@ -232,17 +232,27 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       // Aguardar um pouco mais para garantir que tudo foi aplicado
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Definir mapInstance de forma síncrona
       setMapInstance(map);
       console.log('🗺️ [HOOK] setMapInstance chamado')
       
+      // Forçar re-render imediato
       setIsInitializing(false);
+      
+      // Aguardar um ciclo de render para garantir que o estado foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       console.log('🗺️ [HOOK] initializeMap concluído com sucesso')
+      console.log('🗺️ [HOOK] Verificando estado final - mapInstance:', !!map)
+      
+      // Retornar a instância do mapa diretamente
+      return map;
     } catch (error) {
       console.error('🗺️ [HOOK] Erro ao criar mapa:', error)
       const errorMsg = 'Erro ao inicializar o mapa';
       setError(errorMsg);
       setIsInitializing(false);
-      throw new Error(errorMsg);
+      return null;
     }
   }, [isLoaded, loadGoogleMaps, defaultMapOptions]);
 
