@@ -37,28 +37,40 @@ export default function PdfUpload({
   const handleFiles = async (files: FileList) => {
     const fileArray = Array.from(files);
     
-    // Validar número máximo de arquivos
-    if (validatedFiles.length + fileArray.length > maxFiles) {
-      const error = `Máximo de ${maxFiles} arquivos permitidos`;
-      onValidationError?.(error);
-      return;
+    // Para maxFiles = 1, substituir o arquivo existente
+    if (maxFiles === 1 && fileArray.length === 1) {
+      // Substituir arquivo existente
+      const newValidatingFile: ValidatedFile = {
+        file: fileArray[0],
+        fileName: fileArray[0].name,
+        fileSize: fileArray[0].size,
+        status: 'validating'
+      };
+      setValidatedFiles([newValidatingFile]);
+    } else {
+      // Validar número máximo de arquivos para casos com múltiplos arquivos
+      if (validatedFiles.length + fileArray.length > maxFiles) {
+        const error = `Máximo de ${maxFiles} arquivos permitidos`;
+        onValidationError?.(error);
+        return;
+      }
+
+      // Criar arquivos em estado de validação
+      const newValidatingFiles: ValidatedFile[] = fileArray.map(file => ({
+        file,
+        fileName: file.name,
+        fileSize: file.size,
+        status: 'validating'
+      }));
+
+      setValidatedFiles(prev => [...prev, ...newValidatingFiles]);
     }
-
-    // Criar arquivos em estado de validação
-    const newValidatingFiles: ValidatedFile[] = fileArray.map(file => ({
-      file,
-      fileName: file.name,
-      fileSize: file.size,
-      status: 'validating'
-    }));
-
-    setValidatedFiles(prev => [...prev, ...newValidatingFiles]);
 
     // Validar cada arquivo
     const updatedFiles: ValidatedFile[] = [];
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
-      const fileIndex = validatedFiles.length + i;
+      const fileIndex = maxFiles === 1 ? 0 : validatedFiles.length + i;
       
       try {
         const validation = await validatePdfFile(file);
