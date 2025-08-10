@@ -158,6 +158,34 @@ export default function JobtizeLanding() {
       const result = await response.json()
       
       if (response.ok) {
+        // Se há PDF enviado, substituir o PDF existente do candidato
+        if (uploadedFiles.length > 0 && result.data.id) {
+          try {
+            // Primeiro, excluir PDFs existentes do candidato
+            const deleteResponse = await fetch(`/api/candidate-files/${result.data.id}`, {
+              method: 'DELETE',
+            });
+
+            // Depois, associar o novo PDF
+            await fetch('/api/upload-pdf', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                candidateId: result.data.id,
+                blobName: uploadedFiles[0].blobName,
+                fileName: uploadedFiles[0].fileName,
+                fileSize: uploadedFiles[0].fileSize,
+                blobUrl: uploadedFiles[0].blobUrl,
+                updateOnly: true
+              }),
+            });
+          } catch (error) {
+            console.error('Erro ao substituir PDF do candidato:', error);
+          }
+        }
+
         setSubmitStatus('success')
         setSubmitMessage(`Dados atualizados com sucesso! Obrigado, ${result.data.nome}. Suas informações foram atualizadas em nossa base.`)
         
@@ -478,17 +506,17 @@ export default function JobtizeLanding() {
                   <PdfUpload
                     onUploadSuccess={handlePdfUploadSuccess}
                     onUploadError={handlePdfUploadError}
-                    maxFiles={3}
+                    maxFiles={1}
                     disabled={isSubmitting}
                     className="w-full"
                   />
                   <p className="text-xs text-gray-500">
-                    Envie seu currículo em PDF (máximo 3 arquivos, 10MB cada)
+                    Envie seu currículo em PDF (máximo 1 arquivo, 10MB)
                   </p>
                   {uploadedFiles.length > 0 && (
                     <div className="mt-2">
                       <p className="text-xs text-green-600">
-                        ✅ {uploadedFiles.length} arquivo(s) enviado(s) com sucesso
+                        ✅ Currículo enviado com sucesso
                       </p>
                     </div>
                   )}
@@ -563,6 +591,11 @@ export default function JobtizeLanding() {
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Encontramos um cadastro com este email. Deseja atualizar seus dados?
+                  {uploadedFiles.length > 0 && (
+                    <span className="block mt-2 text-amber-600 font-medium">
+                      ⚠️ O currículo atual será substituído pelo novo arquivo enviado.
+                    </span>
+                  )}
                 </p>
               </div>
             </div>

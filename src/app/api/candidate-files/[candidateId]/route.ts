@@ -72,7 +72,7 @@ export async function GET(
 }
 
 /**
- * Exclui um arquivo específico
+ * Exclui um arquivo específico ou todos os arquivos do candidato
  */
 export async function DELETE(
   request: NextRequest,
@@ -83,11 +83,64 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const fileId = searchParams.get('fileId');
 
-    if (isNaN(candidateId) || !fileId) {
+    if (isNaN(candidateId)) {
       return NextResponse.json(
-        { error: 'ID do candidato e ID do arquivo são obrigatórios' },
+        { error: 'ID do candidato inválido' },
         { status: 400 }
       );
+    }
+
+    const pool = await getPool();
+
+    // Se não tem fileId, excluir todos os arquivos do candidato
+    if (!fileId) {
+      // Buscar todos os arquivos do candidato
+      const filesResult = await pool.request()
+        .input('candidateId', sql.Int, candidateId)
+        .query(`
+          SELECT * FROM candidate_files 
+          WHERE candidate_id = @candidateId AND status = 'active'
+        `);
+
+      if (filesResult.recordset.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: 'Nenhum arquivo encontrado para excluir'
+        });
+      }
+
+      // Excluir cada arquivo do Azure Blob Storage
+      for (const fileRecord of filesResult.recordset) {
+        try {
+          await deleteBlobFile(fileRecord.blob_name);
+        } catch (error) {
+          console.warn(`Falha ao excluir blob ${fileRecord.blob_name}:`, error);
+        }
+      }
+
+      // Marcar todos como excluídos no banco (soft delete)
+      await pool.request()
+        .input('candidateId', sql.Int, candidateId)
+        .query(`
+          UPDATE candidate_files 
+          SET status = 'deleted', updated_at = GETDATE()
+          WHERE candidate_id = @candidateId AND status = 'active'
+        `);
+
+      // Log da ação
+      await pool.request()
+        .input('candidateId', sql.Int, candidateId)
+        .input('action', sql.NVarChar(50), 'ALL_PDFS_DELETED')
+        .input('details', sql.NVarChar(500), `Todos os arquivos do candidato foram excluídos`)
+        .query(`
+          INSERT INTO candidate_logs (candidate_id, action, details)
+          VALUES (@candidateId, @action, @details)
+        `);
+
+      return NextResponse.json({
+        success: true,
+        message: `${filesResult.recordset.length} arquivo(s) excluído(s) com sucesso`
+      });
     }
 
     const pool = await getPool();
@@ -166,4 +219,3 @@ export async function OPTIONS() {
     },
   });
 }
-
