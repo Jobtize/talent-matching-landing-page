@@ -177,10 +177,22 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               console.log('📍 Título:', markerTitle)
               console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
               console.log('📍 Google Maps disponível:', !!window.google)
+              console.log('📍 MapIntegration objeto completo:', mapIntegration)
               
+              if (!mapIntegration.mapInstance) {
+                console.error('❌ MapInstance é null! Não é possível adicionar marcador')
+                return
+              }
+              
+              if (!window.google) {
+                console.error('❌ Google Maps não está disponível!')
+                return
+              }
+              
+              console.log('📍 Chamando addMarker...')
               mapIntegration.addMarker(locationToUse, markerTitle)
-              console.log('📍 Marcador adicionado!')
-            }, 200) // Aumentar timeout para garantir que o mapa esteja pronto
+              console.log('📍 addMarker chamado com sucesso!')
+            }, 500) // Aumentar timeout ainda mais para garantir inicialização
             
             console.log('🗺️ Mapa inicializado com sucesso!')
           } catch (error) {
