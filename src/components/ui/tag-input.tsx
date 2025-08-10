@@ -89,7 +89,7 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
             {value.map((tag, index) => (
               <span
                 key={index}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-sm font-medium"
+                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium border border-blue-200"
               >
                 {tag}
                 <button
@@ -98,7 +98,7 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
                     e.stopPropagation()
                     removeTag(index)
                   }}
-                  className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                  className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-1"
                 >
                   <X className="w-3 h-3" />
                 </button>
