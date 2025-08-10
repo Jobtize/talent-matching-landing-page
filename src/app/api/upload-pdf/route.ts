@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
         .input('contentType', sql.NVarChar(100), file.type)
         .query(`
           INSERT INTO candidate_files 
-          (candidate_id, file_name, original_name, blob_name, blob_url, file_size, content_type)
+          (candidate_id, file_name, original_name, blob_name, blob_url, file_size, content_type, status)
           VALUES 
-          (@candidateId, @fileName, @originalName, @blobName, @blobUrl, @fileSize, @contentType)
+          (@candidateId, @fileName, @originalName, @blobName, @blobUrl, @fileSize, @contentType, 'active')
         `);
 
       // Log da ação

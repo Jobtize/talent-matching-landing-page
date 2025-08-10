@@ -225,12 +225,19 @@ export default function JobtizeLanding() {
             setSubmitMessage('Substituindo currículo...')
             
             // Primeiro, excluir PDFs existentes do candidato
+            console.log('Deletando PDFs existentes para candidato:', result.data.id)
             const deleteResponse = await fetch(`/api/candidate-files/${result.data.id}`, {
               method: 'DELETE',
             });
 
+            const deleteResult = await deleteResponse.json()
+            console.log('Resultado da deleção:', deleteResult)
+
             if (!deleteResponse.ok) {
-              console.warn('Erro ao deletar PDFs existentes, mas continuando...')
+              console.warn('Erro ao deletar PDFs existentes:', deleteResult)
+              console.warn('Mas continuando com upload...')
+            } else {
+              console.log('PDFs antigos deletados com sucesso')
             }
 
             // Segundo, fazer upload do novo PDF
