@@ -143,7 +143,14 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 
     // Gerenciar mapa: inicialização e atualizações de localização
     React.useEffect(() => {
+      console.log('🔄 useEffect executado')
+      console.log('🔄 showMap:', showMap)
+      console.log('🔄 mapRef.current:', !!mapRef.current)
+      console.log('🔄 mapIntegration.isLoaded:', mapIntegration.isLoaded)
+      
       const initializeMap = async () => {
+        console.log('🔄 initializeMap função chamada')
+        
         if (showMap && mapRef.current && mapIntegration.isLoaded) {
           console.log('🗺️ === INICIANDO MAPA ===')
           console.log('🗺️ MapRef atual:', mapRef.current)
@@ -153,13 +160,18 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
           console.log('🗺️ LastMapLocation:', lastMapLocation)
           
           try {
+            console.log('🔄 Entrando no try block')
+            
             // SEMPRE recriar o mapa quando o elemento DOM for recriado
             console.log('🗺️ Limpando instância anterior e criando nova...')
             mapIntegration.clearMap()
+            console.log('🔄 clearMap executado')
             
             // Determinar qual localização usar
+            console.log('🔄 Determinando localização...')
             const locationToUse = selectedLocation || SAO_PAULO_CENTER
             const markerTitle = selectedLocation ? 'Localização selecionada' : 'São Paulo - SP, Brasil'
+            console.log('🔄 Localização determinada')
             
             console.log('🗺️ Localização escolhida:', locationToUse)
             console.log('🗺️ Título do marcador:', markerTitle)
