@@ -170,17 +170,18 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             // Atualizar última localização
             setLastMapLocation(locationToUse)
             
-            // Aguardar e adicionar marcador
-            setTimeout(() => {
-              console.log('📍 === ADICIONANDO MARCADOR ===')
+            // Aguardar mapInstance ser atualizado no estado e adicionar marcador
+            const waitForMapAndAddMarker = () => {
+              console.log('📍 === VERIFICANDO MAPA PARA ADICIONAR MARCADOR ===')
               console.log('📍 Posição:', locationToUse)
               console.log('📍 Título:', markerTitle)
               console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
               console.log('📍 Google Maps disponível:', !!window.google)
-              console.log('📍 MapIntegration objeto completo:', mapIntegration)
               
               if (!mapIntegration.mapInstance) {
-                console.error('❌ MapInstance é null! Não é possível adicionar marcador')
+                console.log('⏳ MapInstance ainda é null, aguardando...')
+                // Tentar novamente em 100ms
+                setTimeout(waitForMapAndAddMarker, 100)
                 return
               }
               
@@ -189,10 +190,14 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                 return
               }
               
-              console.log('📍 Chamando addMarker...')
+              console.log('📍 === ADICIONANDO MARCADOR ===')
+              console.log('📍 MapInstance encontrado, adicionando marcador...')
               mapIntegration.addMarker(locationToUse, markerTitle)
               console.log('📍 addMarker chamado com sucesso!')
-            }, 500) // Aumentar timeout ainda mais para garantir inicialização
+            }
+            
+            // Iniciar verificação após um pequeno delay
+            setTimeout(waitForMapAndAddMarker, 200)
             
             console.log('🗺️ Mapa inicializado com sucesso!')
           } catch (error) {
