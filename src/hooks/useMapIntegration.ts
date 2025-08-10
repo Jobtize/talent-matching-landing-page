@@ -203,12 +203,34 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       const map = new google.maps.Map(element, mapOptions);
       console.log('🗺️ [HOOK] Mapa criado com sucesso:', map)
       
-      // Forçar centralização e zoom após criação
+      // Aguardar o mapa estar completamente carregado
+      console.log('🗺️ [HOOK] Aguardando mapa estar pronto...')
+      
+      // Usar Promise para aguardar o evento 'idle' (mapa completamente carregado)
+      await new Promise<void>((resolve) => {
+        const idleListener = map.addListener('idle', () => {
+          console.log('🗺️ [HOOK] Mapa está idle (pronto)')
+          google.maps.event.removeListener(idleListener);
+          resolve();
+        });
+        
+        // Timeout de segurança
+        setTimeout(() => {
+          console.log('🗺️ [HOOK] Timeout - forçando resolução')
+          google.maps.event.removeListener(idleListener);
+          resolve();
+        }, 3000);
+      });
+      
+      // Forçar centralização e zoom após mapa estar pronto
       console.log('🗺️ [HOOK] Forçando centralização...')
       map.setCenter(center);
       map.setZoom(15);
       console.log('🗺️ [HOOK] Centro forçado para:', center)
       console.log('🗺️ [HOOK] Zoom forçado para: 15')
+      
+      // Aguardar um pouco mais para garantir que tudo foi aplicado
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       setMapInstance(map);
       console.log('🗺️ [HOOK] setMapInstance chamado')
