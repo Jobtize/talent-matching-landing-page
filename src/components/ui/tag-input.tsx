@@ -82,7 +82,7 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
     return (
       <div ref={ref} className={cn("relative", className)}>
         <div
-          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          className="flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 ring-offset-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
           onClick={() => inputRef.current?.focus()}
         >
           <div className="flex flex-wrap gap-2 flex-1">
@@ -113,7 +113,7 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
               onFocus={() => setShowSuggestions(inputValue.length > 0)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               placeholder={value.length === 0 ? placeholder : ""}
-              className="flex-1 min-w-[120px] bg-transparent outline-none placeholder:text-muted-foreground"
+              className="flex-1 min-w-[120px] bg-transparent outline-none placeholder:text-gray-500"
             />
           </div>
         </div>
