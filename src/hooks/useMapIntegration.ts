@@ -24,7 +24,7 @@ export interface UseMapIntegrationOptions {
 
 export interface UseMapIntegrationReturn extends MapState {
   /** Função para inicializar o mapa em um elemento DOM */
-  initializeMap: (element: HTMLElement, center: { lat: number; lng: number }) => Promise<void>;
+  initializeMap: (element: HTMLElement, center: { lat: number; lng: number }) => Promise<google.maps.Map | null>;
   /** Função para adicionar um marcador no mapa */
   addMarker: (position: { lat: number; lng: number }, title?: string) => void;
   /** Função para remover o marcador atual */
@@ -83,6 +83,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
   const [currentMarker, setCurrentMarker] = useState<google.maps.Marker | null>(null);
 
   const loadingPromiseRef = useRef<Promise<void> | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   // Verificar se Google Maps já está carregado
   useEffect(() => {
@@ -169,7 +170,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
   const initializeMap = useCallback(async (
     element: HTMLElement, 
     center: { lat: number; lng: number }
-  ): Promise<void> => {
+  ): Promise<google.maps.Map | null> => {
     if (!isLoaded) {
       await loadGoogleMaps();
     }
@@ -188,8 +189,14 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       };
 
       const map = new google.maps.Map(element, mapOptions);
+      
+      // Atualizar ref primeiro (síncrono) para evitar condição de corrida
+      mapRef.current = map;
+      // Depois atualizar state (assíncrono) para componentes que dependem dele
       setMapInstance(map);
       setIsInitializing(false);
+      
+      return map;
     } catch {
       const errorMsg = 'Erro ao inicializar o mapa';
       setError(errorMsg);
@@ -202,7 +209,9 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     position: { lat: number; lng: number }, 
     title?: string
   ) => {
-    if (!mapInstance || !window.google) {
+    // Usar ref em vez de state para evitar condição de corrida
+    const map = mapRef.current;
+    if (!map || !window.google) {
       console.warn('Mapa não está inicializado');
       return;
     }
@@ -215,13 +224,13 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     // Criar novo marcador
     const marker = new google.maps.Marker({
       position,
-      map: mapInstance,
+      map,
       title,
       animation: google.maps.Animation.DROP
     });
 
     setCurrentMarker(marker);
-  }, [mapInstance, currentMarker]);
+  }, [currentMarker]);
 
   const clearMarker = useCallback(() => {
     if (currentMarker) {
@@ -231,10 +240,12 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
   }, [currentMarker]);
 
   const centerMap = useCallback((position: { lat: number; lng: number }) => {
-    if (mapInstance) {
-      mapInstance.setCenter(position);
+    // Usar ref para operação imediata
+    const map = mapRef.current;
+    if (map) {
+      map.setCenter(position);
     }
-  }, [mapInstance]);
+  }, []);
 
   const clearMap = useCallback(() => {
     if (currentMarker) {
@@ -242,6 +253,8 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       setCurrentMarker(null);
     }
     
+    // Limpar tanto ref quanto state
+    mapRef.current = null;
     setMapInstance(null);
   }, [currentMarker]);
 
