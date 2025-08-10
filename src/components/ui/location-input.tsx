@@ -338,6 +338,11 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                   <button
                     type="button"
                     onClick={async () => {
+                      console.log('🔘 Botão do mapa clicado!')
+                      console.log('🔘 Estado atual - showMap:', showMap, 'autoShowMap:', autoShowMap)
+                      console.log('🔘 hasValidLocation():', hasValidLocation())
+                      console.log('🔘 mapRef.current:', !!mapRef.current)
+                      
                       if (autoShowMap) {
                         // Se está em modo automático, desabilitar e alternar manualmente
                         setAutoShowMap(false)
@@ -346,6 +351,8 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                         // Se está em modo manual, apenas alternar
                         setShowMap(!showMap)
                       }
+                      
+                      console.log('🔘 Após alternar - showMap será:', !showMap)
                       
                       // Se está abrindo o mapa manualmente e não há localização válida,
                       // inicializar com centro de São Paulo
