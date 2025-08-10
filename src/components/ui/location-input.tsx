@@ -140,33 +140,44 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       setInputValue(value)
     }, [value])
 
-    // Inicializar mapa com São Paulo quando mostrado sem localização válida
+    // Sempre recriar o mapa quando ele for aberto (resolve problema do mapa branco)
     React.useEffect(() => {
-      const initializeMapWithSaoPaulo = async () => {
-        if (showMap && !hasValidLocation() && mapRef.current && mapIntegration.isLoaded) {
-          console.log('🗺️ Inicializando mapa com São Paulo via useEffect:', SAO_PAULO_CENTER)
+      const initializeMap = async () => {
+        if (showMap && mapRef.current && mapIntegration.isLoaded) {
+          console.log('🗺️ Inicializando mapa via useEffect')
           console.log('🗺️ MapRef atual:', mapRef.current)
           console.log('🗺️ MapIntegration isLoaded:', mapIntegration.isLoaded)
           console.log('🗺️ MapInstance existe:', !!mapIntegration.mapInstance)
+          console.log('🗺️ HasValidLocation:', hasValidLocation())
+          console.log('🗺️ SelectedLocation:', selectedLocation)
           
           try {
             // SEMPRE recriar o mapa quando o elemento DOM for recriado
             // Isso resolve o problema do mapa ficar branco na segunda vez
             console.log('🗺️ Limpando instância anterior e criando nova...')
             mapIntegration.clearMap()
-            await mapIntegration.initializeMap(mapRef.current, SAO_PAULO_CENTER)
-            console.log('🗺️ Mapa inicializado com sucesso!')
             
-            // Não adicionar marcador quando mostrar centro de São Paulo
-            mapIntegration.clearMarker()
+            if (hasValidLocation() && selectedLocation) {
+              // Se há localização válida, inicializar com ela
+              console.log('🗺️ Inicializando mapa com localização selecionada:', selectedLocation)
+              await mapIntegration.initializeMap(mapRef.current, selectedLocation)
+              mapIntegration.addMarker(selectedLocation, selectedLocation.address || 'Localização selecionada')
+            } else {
+              // Se não há localização, inicializar com São Paulo
+              console.log('🗺️ Inicializando mapa com São Paulo:', SAO_PAULO_CENTER)
+              await mapIntegration.initializeMap(mapRef.current, SAO_PAULO_CENTER)
+              mapIntegration.clearMarker()
+            }
+            
+            console.log('🗺️ Mapa inicializado com sucesso!')
           } catch (error) {
-            console.error('❌ Error initializing map with São Paulo center:', error)
+            console.error('❌ Error initializing map:', error)
           }
         }
       }
 
-      initializeMapWithSaoPaulo()
-    }, [showMap, hasValidLocation, mapIntegration.isLoaded])
+      initializeMap()
+    }, [showMap, mapIntegration.isLoaded, hasValidLocation, selectedLocation])
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
