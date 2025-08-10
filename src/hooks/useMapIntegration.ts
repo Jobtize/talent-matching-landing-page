@@ -24,7 +24,7 @@ export interface UseMapIntegrationOptions {
 
 export interface UseMapIntegrationReturn extends MapState {
   /** Função para inicializar o mapa em um elemento DOM */
-  initializeMap: (element: HTMLElement, center: { lat: number; lng: number }) => Promise<void>;
+  initializeMap: (element: HTMLElement, center: { lat: number; lng: number }) => Promise<google.maps.Map | null>;
   /** Função para adicionar um marcador no mapa */
   addMarker: (position: { lat: number; lng: number }, title?: string) => void;
   /** Função para remover o marcador atual */
