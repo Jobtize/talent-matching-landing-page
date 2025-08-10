@@ -189,8 +189,15 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               // Se não há localização, inicializar com São Paulo
               console.log('🗺️ Inicializando mapa com São Paulo:', SAO_PAULO_CENTER)
               await mapIntegration.initializeMap(mapRef.current, SAO_PAULO_CENTER)
-              setLastMapLocation(null) // Resetar última localização
-              mapIntegration.clearMarker()
+              setLastMapLocation(SAO_PAULO_CENTER) // Definir São Paulo como última localização
+              
+              // Aguardar um pouco para o mapa estar totalmente pronto
+              setTimeout(() => {
+                console.log('📍 Adicionando marcador padrão em São Paulo:', SAO_PAULO_CENTER)
+                console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
+                console.log('📍 Google Maps disponível:', !!window.google)
+                mapIntegration.addMarker(SAO_PAULO_CENTER, 'São Paulo - SP, Brasil')
+              }, 100)
             }
             
             console.log('🗺️ Mapa inicializado com sucesso!')
