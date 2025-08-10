@@ -165,7 +165,19 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             console.log('🗺️ Título do marcador:', markerTitle)
             
             // Inicializar mapa
-            await mapIntegration.initializeMap(mapRef.current, locationToUse)
+            console.log('🗺️ Chamando mapIntegration.initializeMap...')
+            console.log('🗺️ mapRef.current:', mapRef.current)
+            console.log('🗺️ locationToUse:', locationToUse)
+            console.log('🗺️ mapIntegration:', mapIntegration)
+            console.log('🗺️ mapIntegration.initializeMap:', typeof mapIntegration.initializeMap)
+            
+            try {
+              await mapIntegration.initializeMap(mapRef.current, locationToUse)
+              console.log('🗺️ initializeMap retornou com sucesso')
+            } catch (error) {
+              console.error('🗺️ ERRO em initializeMap:', error)
+              throw error
+            }
             
             // Atualizar última localização
             setLastMapLocation(locationToUse)
