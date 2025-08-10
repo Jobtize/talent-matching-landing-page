@@ -9,10 +9,11 @@ import sql from 'mssql';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { blobName: string } }
+  { params }: { params: Promise<{ blobName: string }> }
 ) {
   try {
-    const blobName = decodeURIComponent(params.blobName);
+    const resolvedParams = await params;
+    const blobName = decodeURIComponent(resolvedParams.blobName);
 
     if (!blobName) {
       return NextResponse.json(
@@ -106,4 +107,3 @@ export async function OPTIONS() {
     },
   });
 }
-

@@ -1,23 +1,18 @@
 import { BlobServiceClient, ContainerClient, BlockBlobClient } from '@azure/storage-blob';
-import { validateEnvironmentVariables } from './env-validation';
+import { requireEnvironmentVariables } from './env-validation';
 
 /**
  * Configuração e utilitários para Azure Blob Storage
  * Gerencia upload, download e exclusão de arquivos PDF
  */
 
-// Validar variáveis de ambiente
-const envValidation = validateEnvironmentVariables();
-if (!envValidation.isValid) {
-  throw new Error(`Variáveis de ambiente inválidas: ${envValidation.errors.join(', ')}`);
+// Função para obter clientes do Azure Storage de forma lazy
+function getStorageClients() {
+  const config = requireEnvironmentVariables();
+  const blobServiceClient = BlobServiceClient.fromConnectionString(config.AZURE_STORAGE_CONNECTION_STRING);
+  const containerClient = blobServiceClient.getContainerClient(config.AZURE_STORAGE_CONTAINER_NAME);
+  return { blobServiceClient, containerClient };
 }
-
-const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING!;
-const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME!;
-
-// Cliente do Azure Blob Storage
-const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-const containerClient: ContainerClient = blobServiceClient.getContainerClient(containerName);
 
 /**
  * Tipos para operações de arquivo
@@ -39,9 +34,9 @@ export interface FileValidation {
  */
 const FILE_CONSTRAINTS = {
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
-  ALLOWED_TYPES: ['application/pdf'],
-  ALLOWED_EXTENSIONS: ['.pdf']
-} as const;
+  ALLOWED_TYPES: ['application/pdf'] as string[],
+  ALLOWED_EXTENSIONS: ['.pdf'] as string[]
+};
 
 /**
  * Valida se o arquivo é um PDF válido
@@ -115,6 +110,9 @@ export async function uploadPdfToBlob(
       };
     }
 
+    // Obter clientes do storage
+    const { containerClient } = getStorageClients();
+
     // Gerar nome único para o blob
     const blobName = generateBlobName(file.name, candidateId);
     
@@ -165,6 +163,7 @@ export async function uploadPdfToBlob(
  */
 export async function generateDownloadUrl(blobName: string, expiresInMinutes: number = 60): Promise<string | null> {
   try {
+    const { containerClient } = getStorageClients();
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     
     // Verificar se o blob existe
@@ -188,6 +187,7 @@ export async function generateDownloadUrl(blobName: string, expiresInMinutes: nu
  */
 export async function deleteBlobFile(blobName: string): Promise<boolean> {
   try {
+    const { containerClient } = getStorageClients();
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     
     const deleteResponse = await blockBlobClient.deleteIfExists();
@@ -204,6 +204,7 @@ export async function deleteBlobFile(blobName: string): Promise<boolean> {
  */
 export async function listCandidateFiles(candidateId: string): Promise<string[]> {
   try {
+    const { containerClient } = getStorageClients();
     const prefix = `candidate-${candidateId}/`;
     const blobNames: string[] = [];
 
@@ -224,6 +225,7 @@ export async function listCandidateFiles(candidateId: string): Promise<string[]>
  */
 export async function getBlobMetadata(blobName: string) {
   try {
+    const { containerClient } = getStorageClients();
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     const properties = await blockBlobClient.getProperties();
     
@@ -245,9 +247,8 @@ export async function getBlobMetadata(blobName: string) {
  */
 export async function ensureContainerExists(): Promise<boolean> {
   try {
-    const createResponse = await containerClient.createIfNotExists({
-      access: 'private' // Container privado
-    });
+    const { containerClient } = getStorageClients();
+    const createResponse = await containerClient.createIfNotExists();
     
     return true;
   } catch (error) {
@@ -255,4 +256,3 @@ export async function ensureContainerExists(): Promise<boolean> {
     return false;
   }
 }
-

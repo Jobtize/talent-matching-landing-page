@@ -14,10 +14,11 @@ import sql from 'mssql';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { candidateId: string } }
+  { params }: { params: Promise<{ candidateId: string }> }
 ) {
   try {
-    const candidateId = parseInt(params.candidateId);
+    const resolvedParams = await params;
+    const candidateId = parseInt(resolvedParams.candidateId);
 
     if (isNaN(candidateId)) {
       return NextResponse.json(
@@ -76,10 +77,11 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { candidateId: string } }
+  { params }: { params: Promise<{ candidateId: string }> }
 ) {
   try {
-    const candidateId = parseInt(params.candidateId);
+    const resolvedParams = await params;
+    const candidateId = parseInt(resolvedParams.candidateId);
     const { searchParams } = new URL(request.url);
     const fileId = searchParams.get('fileId');
 
@@ -143,7 +145,7 @@ export async function DELETE(
       });
     }
 
-    const pool = await getPool();
+    // Continuar com exclusão de arquivo específico usando o pool já declarado
     
     // Buscar informações do arquivo
     const fileResult = await pool.request()

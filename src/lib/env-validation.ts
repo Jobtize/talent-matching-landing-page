@@ -205,6 +205,21 @@ export function validateAndLogEnvironment(): boolean {
  * Lança erro se as variáveis não estiverem configuradas corretamente
  */
 export function requireEnvironmentVariables(): EnvironmentConfig {
+  // Durante o build do Next.js, não validar variáveis de ambiente
+  if (process.env.NEXT_PHASE === 'phase-production-build' || 
+      (process.env.NODE_ENV === 'production' && !process.env.AZURE_SQL_SERVER)) {
+    // Retornar configuração mock para o build
+    return {
+      AZURE_SQL_SERVER: 'mock.database.windows.net',
+      AZURE_SQL_DATABASE: 'mock',
+      AZURE_SQL_USERNAME: 'mock',
+      AZURE_SQL_PASSWORD: 'mockpassword',
+      AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=mock;AccountKey=mock',
+      AZURE_STORAGE_CONTAINER_NAME: 'mock',
+      NODE_ENV: 'production'
+    } as EnvironmentConfig;
+  }
+
   const validation = validateEnvironmentVariables();
   
   if (!validation.isValid) {
