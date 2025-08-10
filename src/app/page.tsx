@@ -319,6 +319,15 @@ export default function JobtizeLanding() {
       const result = await response.json()
       
       if (!response.ok) {
+        // Tratamento específico para email duplicado
+        if (response.status === 409 && result.code === 'EMAIL_ALREADY_EXISTS' && result.existingData) {
+          setExistingUserData(result.existingData)
+          setPendingFormData(dataToSend)
+          setShowUpdateModal(true)
+          setIsSubmitting(false)
+          return
+        }
+        
         throw new Error(result.error || 'Erro ao criar candidato')
       }
       
