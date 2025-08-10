@@ -83,6 +83,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
   const [currentMarker, setCurrentMarker] = useState<google.maps.Marker | null>(null);
 
   const loadingPromiseRef = useRef<Promise<void> | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   // Verificar se Google Maps já está carregado
   useEffect(() => {
@@ -233,6 +234,10 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Definir mapInstance de forma síncrona
+      
+      // Atualizar ref primeiro (síncrono) para evitar condição de corrida
+      mapRef.current = map;
+      // Depois atualizar state (assíncrono) para componentes que dependem dele
       setMapInstance(map);
       console.log('🗺️ [HOOK] setMapInstance chamado')
       
@@ -247,8 +252,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       
       // Retornar a instância do mapa diretamente
       return map;
-    } catch (error) {
-      console.error('🗺️ [HOOK] Erro ao criar mapa:', error)
+    } catch {
       const errorMsg = 'Erro ao inicializar o mapa';
       setError(errorMsg);
       setIsInitializing(false);
@@ -260,12 +264,14 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     position: { lat: number; lng: number }, 
     title?: string
   ) => {
+    // Usar ref em vez de state para evitar condição de corrida
+    const map = mapRef.current;
     console.log('📍 addMarker chamado com:', { position, title })
     console.log('📍 mapInstance:', !!mapInstance)
     console.log('📍 window.google:', !!window.google)
     console.log('📍 currentMarker:', !!currentMarker)
     
-    if (!mapInstance || !window.google) {
+    if (!map || !window.google) {
       console.warn('❌ Mapa não está inicializado - mapInstance:', !!mapInstance, 'google:', !!window.google);
       return;
     }
@@ -284,7 +290,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     
     const marker = new google.maps.Marker({
       position,
-      map: mapInstance,
+      map,
       title,
       animation: google.maps.Animation.DROP
     });
@@ -304,7 +310,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     }, 100);
     
     setCurrentMarker(marker);
-  }, [mapInstance, currentMarker]);
+  }, [currentMarker]);
 
   const clearMarker = useCallback(() => {
     if (currentMarker) {
@@ -314,10 +320,12 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
   }, [currentMarker]);
 
   const centerMap = useCallback((position: { lat: number; lng: number }) => {
-    if (mapInstance) {
-      mapInstance.setCenter(position);
+    // Usar ref para operação imediata
+    const map = mapRef.current;
+    if (map) {
+      map.setCenter(position);
     }
-  }, [mapInstance]);
+  }, []);
 
   const clearMap = useCallback(() => {
     if (currentMarker) {
@@ -325,6 +333,8 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       setCurrentMarker(null);
     }
     
+    // Limpar tanto ref quanto state
+    mapRef.current = null;
     setMapInstance(null);
   }, [currentMarker]);
 
