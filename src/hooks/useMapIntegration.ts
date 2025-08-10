@@ -264,53 +264,24 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     position: { lat: number; lng: number }, 
     title?: string
   ) => {
-    // Usar ref em vez de state para evitar condição de corrida
     const map = mapRef.current;
-    console.log('📍 addMarker chamado com:', { position, title })
-    console.log('📍 mapInstance:', !!mapInstance)
-    console.log('📍 window.google:', !!window.google)
-    console.log('📍 currentMarker:', !!currentMarker)
-    
-    if (!map || !window.google) {
-      console.warn('❌ Mapa não está inicializado - mapInstance:', !!mapInstance, 'google:', !!window.google);
-      return;
-    }
+    if (!map || !window.google) return;
 
-    // Remover marcador anterior se existir
-    if (currentMarker) {
-      console.log('📍 Removendo marcador anterior')
-      currentMarker.setMap(null);
-    }
+    // Limpar o anterior de forma segura usando setter com função
+    setCurrentMarker(prev => {
+      if (prev) prev.setMap(null);
+      return prev;
+    });
 
-    // Criar novo marcador
-    console.log('📍 Criando novo marcador...')
-    console.log('📍 Posição do marcador:', position)
-    console.log('📍 Mapa de destino:', mapInstance)
-    console.log('📍 Título:', title)
-    
     const marker = new google.maps.Marker({
       position,
       map,
       title,
-      animation: google.maps.Animation.DROP
+      animation: google.maps.Animation.DROP,
     });
 
-    console.log('📍 Marcador criado com sucesso:', marker)
-    console.log('📍 Marcador visível:', marker.getVisible())
-    console.log('📍 Marcador posição:', marker.getPosition())
-    console.log('📍 Marcador mapa:', marker.getMap())
-    
-    // Forçar refresh do marcador após um pequeno delay
-    setTimeout(() => {
-      console.log('📍 Forçando refresh do marcador...')
-      marker.setMap(null);
-      marker.setMap(mapInstance);
-      marker.setVisible(true);
-      console.log('📍 Marcador refreshed - visível:', marker.getVisible())
-    }, 100);
-    
     setCurrentMarker(marker);
-  }, [currentMarker]);
+  }, []);
 
   const clearMarker = useCallback(() => {
     if (currentMarker) {
@@ -320,11 +291,11 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
   }, [currentMarker]);
 
   const centerMap = useCallback((position: { lat: number; lng: number }) => {
-    // Usar ref para operação imediata
     const map = mapRef.current;
-    if (map) {
-      map.setCenter(position);
-    }
+    if (!map) return;
+    // Usar panTo se projeção estiver pronta, senão setCenter
+    if (map.getProjection()) map.panTo(position); 
+    else map.setCenter(position);
   }, []);
 
   const clearMap = useCallback(() => {
