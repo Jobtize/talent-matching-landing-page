@@ -444,6 +444,8 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                       console.log('🔘 Estado atual - showMap:', showMap, 'autoShowMap:', autoShowMap)
                       console.log('🔘 hasValidLocation():', hasValidLocation())
                       console.log('🔘 mapRef.current:', !!mapRef.current)
+                      console.log('🔘 mapIntegration.isLoaded:', mapIntegration.isLoaded)
+                      console.log('🔘 selectedLocation:', selectedLocation)
                       
                       if (autoShowMap) {
                         // Se está em modo automático, desabilitar e alternar manualmente
@@ -456,6 +458,15 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                       
                       console.log('🔘 Após alternar - showMap será:', !showMap)
                       console.log('🔘 Inicialização será feita via useEffect quando mapa for renderizado')
+                      
+                      // Aguardar um pouco e verificar se useEffect foi executado
+                      setTimeout(() => {
+                        console.log('🔘 [VERIFICAÇÃO] Após 500ms:')
+                        console.log('🔘 [VERIFICAÇÃO] showMap:', showMap)
+                        console.log('🔘 [VERIFICAÇÃO] mapRef.current:', !!mapRef.current)
+                        console.log('🔘 [VERIFICAÇÃO] mapIntegration.isLoaded:', mapIntegration.isLoaded)
+                        console.log('🔘 [VERIFICAÇÃO] mapIntegration.mapInstance:', !!mapIntegration.mapInstance)
+                      }, 500)
                     }}
                     className={`p-1 transition-colors ${
                       showMap 
