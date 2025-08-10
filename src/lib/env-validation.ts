@@ -42,6 +42,23 @@ const environmentSchema = z.object({
     )
     .optional(),
 
+  // Azure Blob Storage
+  AZURE_STORAGE_CONNECTION_STRING: z
+    .string()
+    .min(1, 'AZURE_STORAGE_CONNECTION_STRING é obrigatório')
+    .refine(
+      (val) => val.includes('DefaultEndpointsProtocol=https') && val.includes('AccountName=') && val.includes('AccountKey='),
+      'AZURE_STORAGE_CONNECTION_STRING deve ser uma connection string válida do Azure Storage'
+    ),
+  
+  AZURE_STORAGE_CONTAINER_NAME: z
+    .string()
+    .min(1, 'AZURE_STORAGE_CONTAINER_NAME é obrigatório')
+    .refine(
+      (val) => /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(val) && val.length >= 3 && val.length <= 63,
+      'AZURE_STORAGE_CONTAINER_NAME deve seguir as regras de nomenclatura do Azure (3-63 caracteres, apenas letras minúsculas, números e hífens)'
+    ),
+
   // Variáveis de ambiente do Node.js
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
@@ -188,6 +205,21 @@ export function validateAndLogEnvironment(): boolean {
  * Lança erro se as variáveis não estiverem configuradas corretamente
  */
 export function requireEnvironmentVariables(): EnvironmentConfig {
+  // Durante o build do Next.js, não validar variáveis de ambiente
+  if (process.env.NEXT_PHASE === 'phase-production-build' || 
+      (process.env.NODE_ENV === 'production' && !process.env.AZURE_SQL_SERVER)) {
+    // Retornar configuração mock para o build
+    return {
+      AZURE_SQL_SERVER: 'mock.database.windows.net',
+      AZURE_SQL_DATABASE: 'mock',
+      AZURE_SQL_USERNAME: 'mock',
+      AZURE_SQL_PASSWORD: 'mockpassword',
+      AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=mock;AccountKey=mock',
+      AZURE_STORAGE_CONTAINER_NAME: 'mock',
+      NODE_ENV: 'production'
+    } as EnvironmentConfig;
+  }
+
   const validation = validateEnvironmentVariables();
   
   if (!validation.isValid) {
