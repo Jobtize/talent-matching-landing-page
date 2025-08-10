@@ -99,6 +99,22 @@ CREATE TABLE candidate_technologies (
     CONSTRAINT UQ_candidate_technology UNIQUE (candidate_id, technology_name)
 );
 
+-- Tabela de arquivos PDF dos candidatos
+CREATE TABLE candidate_files (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    candidate_id INT NOT NULL,
+    file_name NVARCHAR(255) NOT NULL,
+    original_name NVARCHAR(255) NOT NULL,
+    blob_name NVARCHAR(500) NOT NULL,
+    blob_url NVARCHAR(1000) NOT NULL,
+    file_size BIGINT NOT NULL,
+    content_type NVARCHAR(100) DEFAULT 'application/pdf',
+    uploaded_at DATETIME2 DEFAULT GETDATE(),
+    status NVARCHAR(20) DEFAULT 'active',
+    FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+    CONSTRAINT UQ_candidate_blob_name UNIQUE (blob_name)
+);
+
 -- Tabela de logs de auditoria
 CREATE TABLE candidate_logs (
     id INT IDENTITY(1,1) PRIMARY KEY,
@@ -130,6 +146,9 @@ CREATE INDEX IX_candidates_email ON candidates(email);
 CREATE INDEX IX_candidates_created_at ON candidates(created_at);
 CREATE INDEX IX_candidate_technologies_candidate_id ON candidate_technologies(candidate_id);
 CREATE INDEX IX_candidate_technologies_technology_name ON candidate_technologies(technology_name);
+CREATE INDEX IX_candidate_files_candidate_id ON candidate_files(candidate_id);
+CREATE INDEX IX_candidate_files_uploaded_at ON candidate_files(uploaded_at);
+CREATE INDEX IX_candidate_files_status ON candidate_files(status);
 CREATE INDEX IX_candidate_logs_candidate_id ON candidate_logs(candidate_id);
 CREATE INDEX IX_candidate_logs_created_at ON candidate_logs(created_at);
 ```
@@ -257,4 +276,3 @@ Para problemas específicos do Azure SQL Database:
 - [Documentação oficial](https://docs.microsoft.com/azure/sql-database/)
 - [Suporte Azure](https://azure.microsoft.com/support/)
 - [Stack Overflow - azure-sql-database](https://stackoverflow.com/questions/tagged/azure-sql-database)
-
