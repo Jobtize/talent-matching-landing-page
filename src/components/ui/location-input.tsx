@@ -144,12 +144,16 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     React.useEffect(() => {
       const initializeMap = async () => {
         if (showMap && mapRef.current && mapIntegration.isLoaded) {
+          // Capturar valores atuais no momento da execução
+          const currentHasValidLocation = hasValidLocation()
+          const currentSelectedLocation = selectedLocation
+          
           console.log('🗺️ Inicializando mapa via useEffect')
           console.log('🗺️ MapRef atual:', mapRef.current)
           console.log('🗺️ MapIntegration isLoaded:', mapIntegration.isLoaded)
           console.log('🗺️ MapInstance existe:', !!mapIntegration.mapInstance)
-          console.log('🗺️ HasValidLocation:', hasValidLocation())
-          console.log('🗺️ SelectedLocation:', selectedLocation)
+          console.log('🗺️ HasValidLocation:', currentHasValidLocation)
+          console.log('🗺️ SelectedLocation:', currentSelectedLocation)
           
           try {
             // SEMPRE recriar o mapa quando o elemento DOM for recriado
@@ -157,17 +161,17 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             console.log('🗺️ Limpando instância anterior e criando nova...')
             mapIntegration.clearMap()
             
-            if (hasValidLocation() && selectedLocation) {
+            if (currentHasValidLocation && currentSelectedLocation) {
               // Se há localização válida, inicializar com ela
-              console.log('🗺️ Inicializando mapa com localização selecionada:', selectedLocation)
-              await mapIntegration.initializeMap(mapRef.current, selectedLocation)
+              console.log('🗺️ Inicializando mapa com localização selecionada:', currentSelectedLocation)
+              await mapIntegration.initializeMap(mapRef.current, currentSelectedLocation)
               
               // Aguardar um pouco para o mapa estar totalmente pronto
               setTimeout(() => {
-                console.log('📍 Adicionando marcador na posição:', selectedLocation)
+                console.log('📍 Adicionando marcador na posição:', currentSelectedLocation)
                 console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
                 console.log('📍 Google Maps disponível:', !!window.google)
-                mapIntegration.addMarker(selectedLocation, selectedLocation.address || 'Localização selecionada')
+                mapIntegration.addMarker(currentSelectedLocation, currentSelectedLocation.address || 'Localização selecionada')
               }, 100)
             } else {
               // Se não há localização, inicializar com São Paulo
@@ -184,7 +188,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       }
 
       initializeMap()
-    }, [showMap, mapIntegration.isLoaded, hasValidLocation, selectedLocation])
+    }, [showMap, mapIntegration.isLoaded])
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
