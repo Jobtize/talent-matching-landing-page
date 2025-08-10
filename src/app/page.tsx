@@ -220,30 +220,31 @@ export default function JobtizeLanding() {
       
       if (response.ok) {
         // Se há PDF enviado, substituir o PDF existente do candidato
-        if (uploadedFiles.length > 0 && result.data.id) {
+        if (validatedFiles.length > 0 && result.data.id) {
           try {
+            setSubmitMessage('Substituindo currículo...')
+            
             // Primeiro, excluir PDFs existentes do candidato
             const deleteResponse = await fetch(`/api/candidate-files/${result.data.id}`, {
               method: 'DELETE',
             });
 
-            // Depois, associar o novo PDF
-            await fetch('/api/upload-pdf', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                candidateId: result.data.id,
-                blobName: uploadedFiles[0].blobName,
-                fileName: uploadedFiles[0].fileName,
-                fileSize: uploadedFiles[0].fileSize,
-                blobUrl: uploadedFiles[0].blobUrl,
-                updateOnly: true
-              }),
-            });
+            if (!deleteResponse.ok) {
+              console.warn('Erro ao deletar PDFs existentes, mas continuando...')
+            }
+
+            // Segundo, fazer upload do novo PDF
+            const uploadedPdfFiles = await uploadValidatedFilesWithCandidateId(result.data.id)
+            
+            if (uploadedPdfFiles.length === 0) {
+              throw new Error('Falha ao fazer upload do novo PDF')
+            }
+
+            console.log('PDF substituído com sucesso:', uploadedPdfFiles[0])
           } catch (error) {
-            console.error('Erro ao substituir PDF do candidato:', error);
+            console.error('Erro ao substituir PDF do candidato:', error)
+            // Não falha a atualização por causa do PDF, mas mostra warning
+            setSubmitMessage('Dados atualizados, mas houve problema com o PDF')
           }
         }
 
