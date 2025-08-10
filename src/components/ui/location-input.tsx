@@ -171,16 +171,25 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             setLastMapLocation(locationToUse)
             
             // Aguardar mapInstance ser atualizado no estado e adicionar marcador
+            let retryCount = 0
+            const maxRetries = 50 // Máximo 5 segundos (50 * 100ms)
+            
             const waitForMapAndAddMarker = () => {
               console.log('📍 === VERIFICANDO MAPA PARA ADICIONAR MARCADOR ===')
+              console.log('📍 Tentativa:', retryCount + 1, '/', maxRetries)
               console.log('📍 Posição:', locationToUse)
               console.log('📍 Título:', markerTitle)
               console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
               console.log('📍 Google Maps disponível:', !!window.google)
               
               if (!mapIntegration.mapInstance) {
-                console.log('⏳ MapInstance ainda é null, aguardando...')
-                // Tentar novamente em 100ms
+                retryCount++
+                if (retryCount >= maxRetries) {
+                  console.error('❌ Timeout: MapInstance não foi criado após', maxRetries, 'tentativas')
+                  console.error('❌ Possível problema no hook useMapIntegration')
+                  return
+                }
+                console.log('⏳ MapInstance ainda é null, aguardando... (tentativa', retryCount, '/', maxRetries, ')')
                 setTimeout(waitForMapAndAddMarker, 100)
                 return
               }
@@ -191,7 +200,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               }
               
               console.log('📍 === ADICIONANDO MARCADOR ===')
-              console.log('📍 MapInstance encontrado, adicionando marcador...')
+              console.log('📍 MapInstance encontrado após', retryCount, 'tentativas!')
               mapIntegration.addMarker(locationToUse, markerTitle)
               console.log('📍 addMarker chamado com sucesso!')
             }

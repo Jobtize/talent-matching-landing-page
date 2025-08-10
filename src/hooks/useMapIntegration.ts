@@ -170,14 +170,22 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     element: HTMLElement, 
     center: { lat: number; lng: number }
   ): Promise<void> => {
+    console.log('🗺️ [HOOK] initializeMap chamado')
+    console.log('🗺️ [HOOK] isLoaded:', isLoaded)
+    console.log('🗺️ [HOOK] element:', element)
+    console.log('🗺️ [HOOK] center:', center)
+    
     if (!isLoaded) {
+      console.log('🗺️ [HOOK] Google Maps não carregado, carregando...')
       await loadGoogleMaps();
     }
 
     if (!window.google || !window.google.maps) {
+      console.error('🗺️ [HOOK] Google Maps não está disponível após carregamento')
       throw new Error('Google Maps não está disponível');
     }
 
+    console.log('🗺️ [HOOK] Iniciando criação do mapa...')
     setIsInitializing(true);
     setError(null);
 
@@ -187,10 +195,19 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
         center,
       };
 
+      console.log('🗺️ [HOOK] Criando instância do Google Maps...')
+      console.log('🗺️ [HOOK] mapOptions:', mapOptions)
+      
       const map = new google.maps.Map(element, mapOptions);
+      console.log('🗺️ [HOOK] Mapa criado com sucesso:', map)
+      
       setMapInstance(map);
+      console.log('🗺️ [HOOK] setMapInstance chamado')
+      
       setIsInitializing(false);
-    } catch {
+      console.log('🗺️ [HOOK] initializeMap concluído com sucesso')
+    } catch (error) {
+      console.error('🗺️ [HOOK] Erro ao criar mapa:', error)
       const errorMsg = 'Erro ao inicializar o mapa';
       setError(errorMsg);
       setIsInitializing(false);
