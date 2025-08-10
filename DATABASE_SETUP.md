@@ -102,7 +102,7 @@ CREATE TABLE candidate_technologies (
 -- Tabela de arquivos PDF dos candidatos
 CREATE TABLE candidate_files (
     id INT IDENTITY(1,1) PRIMARY KEY,
-    candidate_id INT NOT NULL,
+    candidate_id INT NULL, -- Permite NULL para arquivos enviados antes do cadastro
     file_name NVARCHAR(255) NOT NULL,
     original_name NVARCHAR(255) NOT NULL,
     blob_name NVARCHAR(500) NOT NULL,

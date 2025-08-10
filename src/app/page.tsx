@@ -7,6 +7,7 @@ import { PhoneInput } from '@/components/ui/phone-input'
 import { LocationInput } from '@/components/ui/location-input'
 import { TagInput } from '@/components/ui/tag-input'
 import { JobtizeLogo } from '@/components/ui/jobtize-logo'
+import PdfUpload from '@/components/ui/pdf-upload'
 import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
@@ -31,6 +32,13 @@ interface FormData {
   areas: string
   tecnologias: string[]
   curriculo?: File | null
+}
+
+interface UploadedFile {
+  fileName: string
+  fileSize: number
+  blobName: string
+  blobUrl: string
 }
 
 interface ExistingUserData {
@@ -71,6 +79,7 @@ export default function JobtizeLanding() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = useState('')
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   
   // Estados para modal de confirmação de atualização
   const [showUpdateModal, setShowUpdateModal] = useState(false)
@@ -118,6 +127,16 @@ export default function JobtizeLanding() {
     }))
   }
 
+  // Handlers para upload de PDF
+  const handlePdfUploadSuccess = (result: UploadedFile) => {
+    setUploadedFiles(prev => [...prev, result])
+  }
+
+  const handlePdfUploadError = (error: string) => {
+    console.error('Erro no upload de PDF:', error)
+    // Você pode mostrar uma notificação de erro aqui se desejar
+  }
+
   // Função para confirmar atualização dos dados
   const handleConfirmUpdate = async () => {
     if (!pendingFormData) return
@@ -154,6 +173,7 @@ export default function JobtizeLanding() {
           tecnologias: [],
           curriculo: null
         })
+        setUploadedFiles([])
       } else {
         setSubmitStatus('error')
         setSubmitMessage(result.error || 'Erro ao atualizar dados. Tente novamente.')
@@ -214,6 +234,39 @@ export default function JobtizeLanding() {
         setSubmitStatus('success')
         setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
         
+        // Se há arquivos PDF enviados, associá-los ao candidato
+        if (uploadedFiles.length > 0 && result.data.id) {
+          try {
+            await Promise.all(
+              uploadedFiles.map(async (file) => {
+                const formData = new FormData();
+                // Criar um arquivo fake para reenviar (já que o arquivo original foi enviado)
+                // Na verdade, vamos apenas atualizar o banco para associar o arquivo ao candidato
+                const updateResponse = await fetch('/api/upload-pdf', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    candidateId: result.data.id,
+                    blobName: file.blobName,
+                    fileName: file.fileName,
+                    fileSize: file.fileSize,
+                    blobUrl: file.blobUrl,
+                    updateOnly: true
+                  }),
+                });
+                
+                if (!updateResponse.ok) {
+                  console.error('Erro ao associar arquivo ao candidato:', file.fileName);
+                }
+              })
+            );
+          } catch (error) {
+            console.error('Erro ao associar arquivos ao candidato:', error);
+          }
+        }
+        
         // Reset do formulário após sucesso
         setFormData({
           nome: '',
@@ -226,6 +279,7 @@ export default function JobtizeLanding() {
           tecnologias: [],
           curriculo: null
         })
+        setUploadedFiles([])
       } else {
         // Tratamento específico para email duplicado
         if (result.code === 'EMAIL_ALREADY_EXISTS' && result.existingData) {
@@ -416,22 +470,27 @@ export default function JobtizeLanding() {
                 </div>
 
                 {/* Campo de Currículo */}
+                {/* Upload de PDF */}
                 <div className="space-y-2">
-                  <label htmlFor="curriculo" className="block text-sm font-medium text-gray-700">
-                    Currículo (PDF, DOC, DOCX) - Opcional
+                  <label className="block text-sm font-medium text-gray-700">
+                    📄 Currículo (PDF) - Opcional
                   </label>
-                  <input
-                    id="curriculo"
-                    name="curriculo"
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleCurriculoChange}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded-md"
+                  <PdfUpload
+                    onUploadSuccess={handlePdfUploadSuccess}
+                    onUploadError={handlePdfUploadError}
+                    maxFiles={3}
+                    disabled={isSubmitting}
+                    className="w-full"
                   />
-                  {formData.curriculo && (
-                    <p className="text-sm text-green-600">
-                      ✓ Arquivo selecionado: {formData.curriculo.name}
-                    </p>
+                  <p className="text-xs text-gray-500">
+                    Envie seu currículo em PDF (máximo 3 arquivos, 10MB cada)
+                  </p>
+                  {uploadedFiles.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs text-green-600">
+                        ✅ {uploadedFiles.length} arquivo(s) enviado(s) com sucesso
+                      </p>
+                    </div>
                   )}
                 </div>
 

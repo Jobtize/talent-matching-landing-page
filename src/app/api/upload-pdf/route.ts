@@ -13,6 +13,37 @@ export async function POST(request: NextRequest) {
     // Verificar se o container existe
     await ensureContainerExists();
 
+    // Verificar se é uma atualização de candidateId
+    const contentType = request.headers.get('content-type');
+    if (contentType?.includes('application/json')) {
+      const body = await request.json();
+      if (body.updateOnly && body.candidateId && body.blobName) {
+        // Atualizar arquivo existente com candidateId
+        try {
+          const pool = await getPool();
+          await pool.request()
+            .input('candidateId', sql.Int, parseInt(body.candidateId))
+            .input('blobName', sql.NVarChar(500), body.blobName)
+            .query(`
+              UPDATE candidate_files 
+              SET candidate_id = @candidateId
+              WHERE blob_name = @blobName AND candidate_id IS NULL
+            `);
+
+          return NextResponse.json({
+            success: true,
+            message: 'Arquivo associado ao candidato com sucesso'
+          });
+        } catch (error) {
+          console.error('Erro ao associar arquivo ao candidato:', error);
+          return NextResponse.json(
+            { error: 'Erro ao associar arquivo ao candidato' },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
     // Obter dados do FormData
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -44,12 +75,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Se temos candidateId, salvar referência no banco
-    if (candidateId && uploadResult.blobName && uploadResult.blobUrl) {
+    // Salvar referência no banco (com ou sem candidateId)
+    if (uploadResult.blobName && uploadResult.blobUrl) {
       try {
         const pool = await getPool();
         const result = await pool.request()
-          .input('candidateId', sql.Int, parseInt(candidateId))
+          .input('candidateId', candidateId ? sql.Int : sql.Int, candidateId ? parseInt(candidateId) : null)
           .input('fileName', sql.NVarChar(255), file.name)
           .input('originalName', sql.NVarChar(255), file.name)
           .input('blobName', sql.NVarChar(500), uploadResult.blobName)
@@ -63,15 +94,17 @@ export async function POST(request: NextRequest) {
             (@candidateId, @fileName, @originalName, @blobName, @blobUrl, @fileSize, @contentType)
           `);
 
-        // Log da ação
-        await pool.request()
-          .input('candidateId', sql.Int, parseInt(candidateId))
-          .input('action', sql.NVarChar(50), 'PDF_UPLOADED')
-          .input('details', sql.NVarChar(500), `Arquivo ${file.name} enviado com sucesso`)
-          .query(`
-            INSERT INTO candidate_logs (candidate_id, action, details)
-            VALUES (@candidateId, @action, @details)
-          `);
+        // Log da ação apenas se temos candidateId
+        if (candidateId) {
+          await pool.request()
+            .input('candidateId', sql.Int, parseInt(candidateId))
+            .input('action', sql.NVarChar(50), 'PDF_UPLOADED')
+            .input('details', sql.NVarChar(500), `Arquivo ${file.name} enviado com sucesso`)
+            .query(`
+              INSERT INTO candidate_logs (candidate_id, action, details)
+              VALUES (@candidateId, @action, @details)
+            `);
+        }
 
       } catch (dbError) {
         console.error('Erro ao salvar referência no banco:', dbError);
@@ -115,4 +148,3 @@ export async function OPTIONS() {
     },
   });
 }
-
