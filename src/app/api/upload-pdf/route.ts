@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadPdfToBlob, ensureContainerExists } from '@/lib/azure-storage';
-import { validateFile, PDF_CONSTRAINTS } from '@/lib/utils/file-validation';
+import { validatePdfFileServer } from '@/lib/utils/file-validation';
 import { getPool } from '@/lib/database';
 import sql from 'mssql';
 
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validação básica (magic number já foi validada no cliente)
-    const validation = validateFile(file, PDF_CONSTRAINTS);
+    // Validação completa no servidor (incluindo magic number)
+    const validation = await validatePdfFileServer(file);
     if (!validation.isValid) {
       return NextResponse.json(
         { error: validation.error },

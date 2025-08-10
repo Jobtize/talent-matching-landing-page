@@ -212,7 +212,7 @@ export function fileToBase64(file: File): Promise<string> {
 }
 
 /**
- * Lê arquivo como ArrayBuffer
+ * Lê arquivo como ArrayBuffer (browser)
  */
 export function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -221,4 +221,65 @@ export function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
     reader.onload = () => resolve(reader.result as ArrayBuffer);
     reader.onerror = error => reject(error);
   });
+}
+
+/**
+ * Lê arquivo como ArrayBuffer (servidor Node.js)
+ */
+export async function fileToArrayBufferServer(file: File): Promise<ArrayBuffer> {
+  const bytes = await file.arrayBuffer();
+  return bytes;
+}
+
+/**
+ * Valida magic number do PDF no servidor
+ */
+export async function validatePdfMagicNumberServer(file: File): Promise<boolean> {
+  try {
+    const arrayBuffer = await fileToArrayBufferServer(file);
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Verificar se tem pelo menos 4 bytes
+    if (uint8Array.length < 4) {
+      return false;
+    }
+    
+    // Magic number do PDF: %PDF (0x25, 0x50, 0x44, 0x46)
+    return uint8Array[0] === 0x25 && 
+           uint8Array[1] === 0x50 && 
+           uint8Array[2] === 0x44 && 
+           uint8Array[3] === 0x46;
+  } catch (error) {
+    console.error('Erro ao verificar magic number do PDF no servidor:', error);
+    return false;
+  }
+}
+
+/**
+ * Validação completa de PDF no servidor (com magic number)
+ */
+export async function validatePdfFileServer(file: File): Promise<FileValidationResult> {
+  // Validação básica primeiro
+  const basicValidation = validateFile(file, PDF_CONSTRAINTS);
+  if (!basicValidation.isValid) {
+    return basicValidation;
+  }
+
+  try {
+    // Validação de magic number no servidor
+    const magicNumberValid = await validatePdfMagicNumberServer(file);
+    if (!magicNumberValid) {
+      return {
+        isValid: false,
+        error: 'Arquivo não é um PDF válido.'
+      };
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      error: 'Erro ao validar arquivo PDF'
+    };
+  }
+
+  return { isValid: true };
 }
