@@ -357,43 +357,20 @@ export default function JobtizeLanding() {
       setSubmitStatus('success')
       setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
         
-        // Reset do formulário após sucesso
-        setFormData({
-          nome: '',
-          email: '',
-          telefone: '',
-          cargo: '',
-          experiencia: '',
-          localizacao: '',
-          areas: '',
-          tecnologias: [],
-          curriculo: null
-        })
-        setValidatedFiles([])
-        setUploadedFiles([])
-      } else {
-        // Tratamento específico para email duplicado
-        if (result.code === 'EMAIL_ALREADY_EXISTS' && result.existingData) {
-          setExistingUserData(result.existingData)
-          setPendingFormData(dataToSend)
-          setShowUpdateModal(true)
-          return
-        }
-        
-        setSubmitStatus('error')
-        
-        // Mensagens específicas para diferentes tipos de erro
-        switch (result.code) {
-          case 'EMAIL_ALREADY_EXISTS':
-            setSubmitMessage('Este email já está cadastrado. Tente com outro email ou entre em contato conosco.')
-            break
-          case 'DATABASE_CONNECTION_ERROR':
-            setSubmitMessage('Erro de conexão. Verifique sua internet e tente novamente.')
-            break
-          default:
-            setSubmitMessage(result.error || 'Erro ao processar cadastro. Tente novamente.')
-        }
-      }
+      // Reset do formulário após sucesso
+      setFormData({
+        nome: '',
+        email: '',
+        telefone: '',
+        cargo: '',
+        experiencia: '',
+        localizacao: '',
+        areas: '',
+        tecnologias: [],
+        curriculo: null
+      })
+      setValidatedFiles([])
+      setUploadedFiles([])
     } catch (error) {
       console.error('Erro ao enviar formulário:', error)
       setSubmitStatus('error')
