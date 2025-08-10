@@ -294,6 +294,15 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     console.log('📍 Marcador posição:', marker.getPosition())
     console.log('📍 Marcador mapa:', marker.getMap())
     
+    // Forçar refresh do marcador após um pequeno delay
+    setTimeout(() => {
+      console.log('📍 Forçando refresh do marcador...')
+      marker.setMap(null);
+      marker.setMap(mapInstance);
+      marker.setVisible(true);
+      console.log('📍 Marcador refreshed - visível:', marker.getVisible())
+    }, 100);
+    
     setCurrentMarker(marker);
   }, [mapInstance, currentMarker]);
 
