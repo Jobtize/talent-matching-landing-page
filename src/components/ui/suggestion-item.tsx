@@ -62,7 +62,7 @@ export const SuggestionItem = React.forwardRef<HTMLDivElement, SuggestionItemPro
             {mainText}
           </div>
           {secondaryText && (
-            <div className="text-xs text-muted-foreground truncate" title={secondaryText}>
+            <div className="text-xs text-gray-500 truncate" title={secondaryText}>
               {secondaryText}
             </div>
           )}
