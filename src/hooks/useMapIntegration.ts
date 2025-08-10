@@ -286,13 +286,32 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       position,
       map: mapInstance,
       title,
-      animation: google.maps.Animation.DROP
+      animation: google.maps.Animation.DROP,
+      // Forçar visibilidade e z-index
+      visible: true,
+      zIndex: 999999,
+      // Usar ícone customizado para garantir visibilidade
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="8" fill="#FF0000" stroke="#FFFFFF" stroke-width="2"/>
+            <circle cx="16" cy="16" r="4" fill="#FFFFFF"/>
+          </svg>
+        `),
+        scaledSize: new google.maps.Size(32, 32),
+        anchor: new google.maps.Point(16, 16)
+      }
     });
+
+    // Forçar visibilidade após criação
+    marker.setVisible(true);
+    marker.setZIndex(999999);
 
     console.log('📍 Marcador criado com sucesso:', marker)
     console.log('📍 Marcador visível:', marker.getVisible())
     console.log('📍 Marcador posição:', marker.getPosition())
     console.log('📍 Marcador mapa:', marker.getMap())
+    console.log('📍 Marcador z-index:', marker.getZIndex())
     
     setCurrentMarker(marker);
   }, [mapInstance, currentMarker]);

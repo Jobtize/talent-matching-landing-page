@@ -529,6 +529,27 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
 
         {showMap && mapIntegration.isLoaded && (
           <div className="mt-2 border border-input rounded-md overflow-hidden">
+            <style jsx>{`
+              /* Forçar visibilidade dos marcadores do Google Maps */
+              .gm-style img[src*="marker"] {
+                visibility: visible !important;
+                opacity: 1 !important;
+                z-index: 999999 !important;
+              }
+              
+              /* Garantir que elementos do mapa sejam visíveis */
+              .gm-style > div {
+                visibility: visible !important;
+              }
+              
+              /* Forçar visibilidade de todos os elementos de marcador */
+              .gm-style [role="button"],
+              .gm-style [role="img"] {
+                visibility: visible !important;
+                opacity: 1 !important;
+                display: block !important;
+              }
+            `}</style>
             <div 
               ref={mapRef} 
               className="w-full h-64"
