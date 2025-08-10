@@ -12,6 +12,10 @@ export interface CandidateData {
     areas: string;
     tecnologias: string;
     created_at: Date;
+    // Informações do arquivo PDF (se houver)
+    file_name?: string;
+    blob_url?: string;
+    file_size?: number;
 }
 
 export async function checkEmailExists(email: string): Promise<CandidateData | null> {
@@ -20,9 +24,20 @@ export async function checkEmailExists(email: string): Promise<CandidateData | n
     request.input('email', sql.NVarChar(255), email.toLowerCase().trim());
 
     const result = await request.query(`
-    SELECT id, nome, email, telefone, cargo, experiencia, localizacao, areas, tecnologias, created_at
-    FROM candidates
-    WHERE email = @email
+    SELECT 
+      c.id, c.nome, c.email, c.telefone, c.cargo, c.experiencia, 
+      c.localizacao, c.areas, c.tecnologias, c.created_at,
+      cf.file_name, cf.blob_url, cf.file_size
+    FROM candidates c
+    LEFT JOIN candidate_files cf ON c.id = cf.candidate_id 
+      AND cf.status != 'deleted'
+      AND cf.id = (
+        SELECT TOP 1 id 
+        FROM candidate_files 
+        WHERE candidate_id = c.id AND status != 'deleted'
+        ORDER BY created_at DESC
+      )
+    WHERE c.email = @email
   `);
 
     if (result.recordset.length === 0) return null;

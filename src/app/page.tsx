@@ -19,7 +19,9 @@ import {
   User,
   Code2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Download,
+  FileText
 } from 'lucide-react'
 
 interface FormData {
@@ -50,6 +52,10 @@ interface ExistingUserData {
   localizacao?: string
   areas?: string
   created_at: string
+  // Informações do arquivo PDF (se houver)
+  file_name?: string
+  blob_url?: string
+  file_size?: number
 }
 
 interface PendingFormData {
@@ -656,9 +662,9 @@ export default function JobtizeLanding() {
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Encontramos um cadastro com este email. Deseja atualizar seus dados?
-                  {uploadedFiles.length > 0 && (
+                  {validatedFiles.length > 0 && (
                     <span className="block mt-2 text-amber-600 font-medium">
-                      ⚠️ O currículo atual será substituído pelo novo arquivo enviado.
+                      ⚠️ {existingUserData.file_name ? 'O currículo atual será substituído' : 'Um novo currículo será adicionado'} pelo arquivo enviado.
                     </span>
                   )}
                 </p>
@@ -690,6 +696,37 @@ export default function JobtizeLanding() {
                 </p>
               </div>
             </div>
+
+            {/* Seção do PDF atual (se houver) */}
+            {existingUserData.file_name && existingUserData.blob_url && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Currículo atual
+                </h4>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-800 font-medium">
+                      {existingUserData.file_name}
+                    </p>
+                    {existingUserData.file_size && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        {(existingUserData.file_size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    )}
+                  </div>
+                  <a
+                    href={existingUserData.blob_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md transition-colors"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Baixar
+                  </a>
+                </div>
+              </div>
+            )}
             
             <div className="flex flex-col sm:flex-row gap-3">
               <Button

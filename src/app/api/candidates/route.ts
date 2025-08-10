@@ -31,7 +31,11 @@ export async function POST(request: NextRequest) {
           experiencia: existingCandidate.experiencia,
           localizacao: existingCandidate.localizacao,
           areas: existingCandidate.areas,
-          created_at: existingCandidate.created_at
+          created_at: existingCandidate.created_at,
+          // Informações do arquivo PDF (se houver)
+          file_name: existingCandidate.file_name,
+          blob_url: existingCandidate.blob_url,
+          file_size: existingCandidate.file_size
         },
         message: 'Encontramos um cadastro com este email. Deseja atualizar seus dados?'
       }, { status: 409 });
