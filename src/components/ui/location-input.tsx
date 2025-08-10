@@ -166,7 +166,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
       }
 
       initializeMapWithSaoPaulo()
-    }, [showMap, hasValidLocation, mapIntegration.isLoaded, mapIntegration])
+    }, [showMap, hasValidLocation, mapIntegration.isLoaded])
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
