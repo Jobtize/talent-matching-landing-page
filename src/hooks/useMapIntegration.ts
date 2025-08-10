@@ -202,17 +202,24 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     position: { lat: number; lng: number }, 
     title?: string
   ) => {
+    console.log('📍 addMarker chamado com:', { position, title })
+    console.log('📍 mapInstance:', !!mapInstance)
+    console.log('📍 window.google:', !!window.google)
+    console.log('📍 currentMarker:', !!currentMarker)
+    
     if (!mapInstance || !window.google) {
-      console.warn('Mapa não está inicializado');
+      console.warn('❌ Mapa não está inicializado - mapInstance:', !!mapInstance, 'google:', !!window.google);
       return;
     }
 
     // Remover marcador anterior se existir
     if (currentMarker) {
+      console.log('📍 Removendo marcador anterior')
       currentMarker.setMap(null);
     }
 
     // Criar novo marcador
+    console.log('📍 Criando novo marcador...')
     const marker = new google.maps.Marker({
       position,
       map: mapInstance,
@@ -220,6 +227,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       animation: google.maps.Animation.DROP
     });
 
+    console.log('📍 Marcador criado com sucesso:', marker)
     setCurrentMarker(marker);
   }, [mapInstance, currentMarker]);
 

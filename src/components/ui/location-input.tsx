@@ -161,7 +161,14 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
               // Se há localização válida, inicializar com ela
               console.log('🗺️ Inicializando mapa com localização selecionada:', selectedLocation)
               await mapIntegration.initializeMap(mapRef.current, selectedLocation)
-              mapIntegration.addMarker(selectedLocation, selectedLocation.address || 'Localização selecionada')
+              
+              // Aguardar um pouco para o mapa estar totalmente pronto
+              setTimeout(() => {
+                console.log('📍 Adicionando marcador na posição:', selectedLocation)
+                console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
+                console.log('📍 Google Maps disponível:', !!window.google)
+                mapIntegration.addMarker(selectedLocation, selectedLocation.address || 'Localização selecionada')
+              }, 100)
             } else {
               // Se não há localização, inicializar com São Paulo
               console.log('🗺️ Inicializando mapa com São Paulo:', SAO_PAULO_CENTER)
