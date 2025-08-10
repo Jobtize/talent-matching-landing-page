@@ -264,6 +264,13 @@ export default function JobtizeLanding() {
           curriculo: null
         })
         setUploadedFiles([])
+        
+        // Limpar arquivos validados e resetar input file
+        setValidatedFiles([])
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+        if (fileInput) {
+          fileInput.value = ''
+        }
       } else {
         setSubmitStatus('error')
         setSubmitMessage(result.error || 'Erro ao atualizar dados. Tente novamente.')
@@ -387,6 +394,12 @@ export default function JobtizeLanding() {
       })
       setValidatedFiles([])
       setUploadedFiles([])
+      
+      // Resetar input file
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+      if (fileInput) {
+        fileInput.value = ''
+      }
     } catch (error) {
       console.error('Erro ao enviar formulário:', error)
       setSubmitStatus('error')
