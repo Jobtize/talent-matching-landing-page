@@ -13,53 +13,6 @@ export async function POST(request: NextRequest) {
     // Verificar se o container existe
     await ensureContainerExists();
 
-    // Verificar se é uma associação de arquivo ao candidato
-    const contentType = request.headers.get('content-type');
-    if (contentType?.includes('application/json')) {
-      const body = await request.json();
-      if (body.updateOnly && body.candidateId && body.blobName) {
-        // Inserir arquivo no banco associado ao candidato
-        try {
-          const pool = await getPool();
-          await pool.request()
-            .input('candidateId', sql.Int, parseInt(body.candidateId))
-            .input('fileName', sql.NVarChar(255), body.fileName || 'curriculo.pdf')
-            .input('originalName', sql.NVarChar(255), body.fileName || 'curriculo.pdf')
-            .input('blobName', sql.NVarChar(500), body.blobName)
-            .input('blobUrl', sql.NVarChar(1000), body.blobUrl)
-            .input('fileSize', sql.BigInt, body.fileSize || 0)
-            .input('contentType', sql.NVarChar(100), 'application/pdf')
-            .query(`
-              INSERT INTO candidate_files 
-              (candidate_id, file_name, original_name, blob_name, blob_url, file_size, content_type)
-              VALUES 
-              (@candidateId, @fileName, @originalName, @blobName, @blobUrl, @fileSize, @contentType)
-            `);
-
-          // Log da ação
-          await pool.request()
-            .input('candidateId', sql.Int, parseInt(body.candidateId))
-            .input('action', sql.NVarChar(50), 'PDF_ASSOCIATED')
-            .input('details', sql.NVarChar(500), `Arquivo ${body.fileName || 'curriculo.pdf'} associado ao candidato`)
-            .query(`
-              INSERT INTO candidate_logs (candidate_id, action, details)
-              VALUES (@candidateId, @action, @details)
-            `);
-
-          return NextResponse.json({
-            success: true,
-            message: 'Arquivo associado ao candidato com sucesso'
-          });
-        } catch (error) {
-          console.error('Erro ao associar arquivo ao candidato:', error);
-          return NextResponse.json(
-            { error: 'Erro ao associar arquivo ao candidato' },
-            { status: 500 }
-          );
-        }
-      }
-    }
-
     // Obter dados do FormData
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -68,6 +21,13 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { error: 'Nenhum arquivo foi enviado' },
+        { status: 400 }
+      );
+    }
+
+    if (!candidateId) {
+      return NextResponse.json(
+        { error: 'ID do candidato é obrigatório' },
         { status: 400 }
       );
     }
@@ -91,42 +51,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Salvar referência no banco APENAS se temos candidateId
-    if (uploadResult.blobName && uploadResult.blobUrl && candidateId) {
-      try {
-        const pool = await getPool();
-        const result = await pool.request()
-          .input('candidateId', sql.Int, parseInt(candidateId))
-          .input('fileName', sql.NVarChar(255), file.name)
-          .input('originalName', sql.NVarChar(255), file.name)
-          .input('blobName', sql.NVarChar(500), uploadResult.blobName)
-          .input('blobUrl', sql.NVarChar(1000), uploadResult.blobUrl)
-          .input('fileSize', sql.BigInt, file.size)
-          .input('contentType', sql.NVarChar(100), file.type)
-          .query(`
-            INSERT INTO candidate_files 
-            (candidate_id, file_name, original_name, blob_name, blob_url, file_size, content_type)
-            VALUES 
-            (@candidateId, @fileName, @originalName, @blobName, @blobUrl, @fileSize, @contentType)
-          `);
-
-        // Log da ação
-        await pool.request()
-          .input('candidateId', sql.Int, parseInt(candidateId))
-          .input('action', sql.NVarChar(50), 'PDF_UPLOADED')
-          .input('details', sql.NVarChar(500), `Arquivo ${file.name} enviado com sucesso`)
-          .query(`
-            INSERT INTO candidate_logs (candidate_id, action, details)
-            VALUES (@candidateId, @action, @details)
-          `);
-
-      } catch (dbError) {
-        console.error('Erro ao salvar referência no banco:', dbError);
-        // Não falhar o upload se o banco falhar, apenas logar
-      }
+    // Salvar referência no banco (candidateId é obrigatório)
+    if (!uploadResult.blobName || !uploadResult.blobUrl) {
+      return NextResponse.json(
+        { error: 'Erro no upload para Azure Blob Storage' },
+        { status: 500 }
+      );
     }
-    // Se não há candidateId, arquivo fica apenas no Azure Blob Storage
-    // Será associado ao candidato quando o formulário for submetido
+
+    try {
+      const pool = await getPool();
+      await pool.request()
+        .input('candidateId', sql.Int, parseInt(candidateId))
+        .input('fileName', sql.NVarChar(255), file.name)
+        .input('originalName', sql.NVarChar(255), file.name)
+        .input('blobName', sql.NVarChar(500), uploadResult.blobName)
+        .input('blobUrl', sql.NVarChar(1000), uploadResult.blobUrl)
+        .input('fileSize', sql.BigInt, file.size)
+        .input('contentType', sql.NVarChar(100), file.type)
+        .query(`
+          INSERT INTO candidate_files 
+          (candidate_id, file_name, original_name, blob_name, blob_url, file_size, content_type)
+          VALUES 
+          (@candidateId, @fileName, @originalName, @blobName, @blobUrl, @fileSize, @contentType)
+        `);
+
+      // Log da ação
+      await pool.request()
+        .input('candidateId', sql.Int, parseInt(candidateId))
+        .input('action', sql.NVarChar(50), 'PDF_UPLOADED')
+        .input('details', sql.NVarChar(500), `Arquivo ${file.name} enviado com sucesso`)
+        .query(`
+          INSERT INTO candidate_logs (candidate_id, action, details)
+          VALUES (@candidateId, @action, @details)
+        `);
+
+    } catch (dbError) {
+      console.error('Erro ao salvar referência no banco:', dbError);
+      return NextResponse.json(
+        { error: 'Erro ao salvar arquivo no banco de dados' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

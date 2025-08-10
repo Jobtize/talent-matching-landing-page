@@ -139,6 +139,34 @@ export default function JobtizeLanding() {
   }
 
   // Função para fazer upload dos arquivos validados
+  // Nova função que faz upload direto com candidateId
+  const uploadValidatedFilesWithCandidateId = async (candidateId: string): Promise<UploadedFile[]> => {
+    const validFiles = validatedFiles.filter(f => f.status === 'valid')
+    if (validFiles.length === 0) return []
+
+    const uploadPromises = validFiles.map(async (validatedFile) => {
+      const formData = new FormData()
+      formData.append('file', validatedFile.file)
+      formData.append('candidateId', candidateId)
+
+      const response = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erro no upload do arquivo')
+      }
+
+      return result.data as UploadedFile
+    })
+
+    return Promise.all(uploadPromises)
+  }
+
+  // Função antiga mantida para compatibilidade (não usada no novo fluxo)
   const uploadValidatedFiles = async (): Promise<UploadedFile[]> => {
     const validFiles = validatedFiles.filter(f => f.status === 'valid')
     if (validFiles.length === 0) return []
@@ -261,22 +289,12 @@ export default function JobtizeLanding() {
     setSubmitStatus('idle')
     setSubmitMessage('')
     
+    let createdCandidateId: string | null = null
+    
     try {
-      // Primeiro, fazer upload dos arquivos validados
-      let uploadedPdfFiles: UploadedFile[] = []
-      if (validatedFiles.length > 0) {
-        try {
-          uploadedPdfFiles = await uploadValidatedFiles()
-          setUploadedFiles(uploadedPdfFiles)
-        } catch (error) {
-          console.error('Erro no upload dos arquivos:', error)
-          setSubmitStatus('error')
-          setSubmitMessage('Erro no upload dos arquivos. Tente novamente.')
-          setIsSubmitting(false)
-          return
-        }
-      }
-
+      // Primeiro, criar o candidato
+      setSubmitMessage('Criando candidato...')
+      
       // Preparar dados para envio (excluindo currículo por enquanto)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { curriculo, ...formDataWithoutFile } = formData
@@ -300,39 +318,44 @@ export default function JobtizeLanding() {
       
       const result = await response.json()
       
-      if (response.ok) {
-        setSubmitStatus('success')
-        setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar candidato')
+      }
+      
+      createdCandidateId = result.data.id
+      console.log('Candidato criado com ID:', createdCandidateId)
+      
+      // Segundo, fazer upload dos arquivos PDF (se houver)
+      let uploadedPdfFiles: UploadedFile[] = []
+      if (validatedFiles.length > 0 && createdCandidateId) {
+        setSubmitMessage('Enviando arquivos...')
         
-        // Se há arquivos PDF enviados, associá-los ao candidato
-        if (uploadedPdfFiles.length > 0 && result.data.id) {
+        try {
+          uploadedPdfFiles = await uploadValidatedFilesWithCandidateId(createdCandidateId)
+          setUploadedFiles(uploadedPdfFiles)
+        } catch (error) {
+          console.error('Erro no upload dos arquivos:', error)
+          
+          // Rollback: deletar candidato criado
           try {
-            await Promise.all(
-              uploadedPdfFiles.map(async (file) => {
-                const updateResponse = await fetch('/api/upload-pdf', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    candidateId: result.data.id,
-                    blobName: file.blobName,
-                    fileName: file.fileName,
-                    fileSize: file.fileSize,
-                    blobUrl: file.blobUrl,
-                    updateOnly: true
-                  }),
-                });
-                
-                if (!updateResponse.ok) {
-                  console.error('Erro ao associar arquivo ao candidato:', file.fileName);
-                }
-              })
-            );
-          } catch (error) {
-            console.error('Erro ao associar arquivos ao candidato:', error);
+            await fetch(`/api/candidates/${createdCandidateId}`, {
+              method: 'DELETE',
+            })
+            console.log('Candidato deletado devido a erro no upload')
+          } catch (deleteError) {
+            console.error('Erro ao deletar candidato:', deleteError)
           }
+          
+          setSubmitStatus('error')
+          setSubmitMessage('Erro no upload dos arquivos. Candidato não foi criado.')
+          setIsSubmitting(false)
+          return
         }
+      }
+      
+      // Sucesso completo
+      setSubmitStatus('success')
+      setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
         
         // Reset do formulário após sucesso
         setFormData({
