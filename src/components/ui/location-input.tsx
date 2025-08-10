@@ -350,16 +350,24 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
                       // Se está abrindo o mapa manualmente e não há localização válida,
                       // inicializar com centro de São Paulo
                       if (!showMap && !hasValidLocation() && mapRef.current) {
+                        console.log('🗺️ Inicializando mapa com São Paulo:', SAO_PAULO_CENTER)
+                        console.log('🗺️ MapRef atual:', mapRef.current)
+                        console.log('🗺️ MapIntegration isLoaded:', mapIntegration.isLoaded)
+                        console.log('🗺️ MapInstance existe:', !!mapIntegration.mapInstance)
+                        
                         try {
                           if (!mapIntegration.mapInstance) {
+                            console.log('🗺️ Criando nova instância do mapa...')
                             await mapIntegration.initializeMap(mapRef.current, SAO_PAULO_CENTER)
+                            console.log('🗺️ Mapa inicializado com sucesso!')
                           } else {
+                            console.log('🗺️ Centralizando mapa existente...')
                             mapIntegration.centerMap(SAO_PAULO_CENTER)
                           }
                           // Não adicionar marcador quando mostrar centro de São Paulo
                           mapIntegration.clearMarker()
                         } catch (error) {
-                          console.error('Error initializing map with São Paulo center:', error)
+                          console.error('❌ Error initializing map with São Paulo center:', error)
                         }
                       }
                     }}
