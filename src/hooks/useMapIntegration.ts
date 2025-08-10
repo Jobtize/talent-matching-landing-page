@@ -237,6 +237,10 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
 
     // Criar novo marcador
     console.log('📍 Criando novo marcador...')
+    console.log('📍 Posição do marcador:', position)
+    console.log('📍 Mapa de destino:', mapInstance)
+    console.log('📍 Título:', title)
+    
     const marker = new google.maps.Marker({
       position,
       map: mapInstance,
@@ -245,6 +249,10 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     });
 
     console.log('📍 Marcador criado com sucesso:', marker)
+    console.log('📍 Marcador visível:', marker.getVisible())
+    console.log('📍 Marcador posição:', marker.getPosition())
+    console.log('📍 Marcador mapa:', marker.getMap())
+    
     setCurrentMarker(marker);
   }, [mapInstance, currentMarker]);
 
