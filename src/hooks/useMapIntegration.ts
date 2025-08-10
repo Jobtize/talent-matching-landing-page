@@ -197,9 +197,18 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
 
       console.log('🗺️ [HOOK] Criando instância do Google Maps...')
       console.log('🗺️ [HOOK] mapOptions:', mapOptions)
+      console.log('🗺️ [HOOK] center recebido:', center)
+      console.log('🗺️ [HOOK] defaultMapOptions:', defaultMapOptions)
       
       const map = new google.maps.Map(element, mapOptions);
       console.log('🗺️ [HOOK] Mapa criado com sucesso:', map)
+      
+      // Forçar centralização e zoom após criação
+      console.log('🗺️ [HOOK] Forçando centralização...')
+      map.setCenter(center);
+      map.setZoom(15);
+      console.log('🗺️ [HOOK] Centro forçado para:', center)
+      console.log('🗺️ [HOOK] Zoom forçado para: 15')
       
       setMapInstance(map);
       console.log('🗺️ [HOOK] setMapInstance chamado')
