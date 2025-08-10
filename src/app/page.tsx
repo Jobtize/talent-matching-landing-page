@@ -7,7 +7,7 @@ import { PhoneInput } from '@/components/ui/phone-input'
 import { LocationInput } from '@/components/ui/location-input'
 import { TagInput } from '@/components/ui/tag-input'
 import { JobtizeLogo } from '@/components/ui/jobtize-logo'
-import PdfUpload from '@/components/ui/pdf-upload'
+import PdfUpload, { ValidatedFile } from '@/components/ui/pdf-upload'
 import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
@@ -79,6 +79,7 @@ export default function JobtizeLanding() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = useState('')
+  const [validatedFiles, setValidatedFiles] = useState<ValidatedFile[]>([])
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   
   // Estados para modal de confirmação de atualização
@@ -127,14 +128,40 @@ export default function JobtizeLanding() {
     }))
   }
 
-  // Handlers para upload de PDF
-  const handlePdfUploadSuccess = (result: UploadedFile) => {
-    setUploadedFiles(prev => [...prev, result])
+  // Handlers para validação de PDF
+  const handleFilesValidated = (files: ValidatedFile[]) => {
+    setValidatedFiles(files)
   }
 
-  const handlePdfUploadError = (error: string) => {
-    console.error('Erro no upload de PDF:', error)
+  const handleValidationError = (error: string) => {
+    console.error('Erro na validação de PDF:', error)
     // Você pode mostrar uma notificação de erro aqui se desejar
+  }
+
+  // Função para fazer upload dos arquivos validados
+  const uploadValidatedFiles = async (): Promise<UploadedFile[]> => {
+    const validFiles = validatedFiles.filter(f => f.status === 'valid')
+    if (validFiles.length === 0) return []
+
+    const uploadPromises = validFiles.map(async (validatedFile) => {
+      const formData = new FormData()
+      formData.append('file', validatedFile.file)
+
+      const response = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erro no upload do arquivo')
+      }
+
+      return result.data as UploadedFile
+    })
+
+    return Promise.all(uploadPromises)
   }
 
   // Função para confirmar atualização dos dados
@@ -235,6 +262,21 @@ export default function JobtizeLanding() {
     setSubmitMessage('')
     
     try {
+      // Primeiro, fazer upload dos arquivos validados
+      let uploadedPdfFiles: UploadedFile[] = []
+      if (validatedFiles.length > 0) {
+        try {
+          uploadedPdfFiles = await uploadValidatedFiles()
+          setUploadedFiles(uploadedPdfFiles)
+        } catch (error) {
+          console.error('Erro no upload dos arquivos:', error)
+          setSubmitStatus('error')
+          setSubmitMessage('Erro no upload dos arquivos. Tente novamente.')
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       // Preparar dados para envio (excluindo currículo por enquanto)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { curriculo, ...formDataWithoutFile } = formData
@@ -263,13 +305,10 @@ export default function JobtizeLanding() {
         setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
         
         // Se há arquivos PDF enviados, associá-los ao candidato
-        if (uploadedFiles.length > 0 && result.data.id) {
+        if (uploadedPdfFiles.length > 0 && result.data.id) {
           try {
             await Promise.all(
-              uploadedFiles.map(async (file) => {
-                const formData = new FormData();
-                // Criar um arquivo fake para reenviar (já que o arquivo original foi enviado)
-                // Na verdade, vamos apenas atualizar o banco para associar o arquivo ao candidato
+              uploadedPdfFiles.map(async (file) => {
                 const updateResponse = await fetch('/api/upload-pdf', {
                   method: 'POST',
                   headers: {
@@ -307,6 +346,7 @@ export default function JobtizeLanding() {
           tecnologias: [],
           curriculo: null
         })
+        setValidatedFiles([])
         setUploadedFiles([])
       } else {
         // Tratamento específico para email duplicado
@@ -506,8 +546,8 @@ export default function JobtizeLanding() {
                     📄 Currículo (PDF) - Opcional
                   </label>
                   <PdfUpload
-                    onUploadSuccess={handlePdfUploadSuccess}
-                    onUploadError={handlePdfUploadError}
+                    onFilesValidated={handleFilesValidated}
+                    onValidationError={handleValidationError}
                     maxFiles={1}
                     disabled={isSubmitting}
                     className="w-full"

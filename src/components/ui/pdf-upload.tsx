@@ -7,37 +7,30 @@ import { formatFileSize } from '@/lib/utils/file-validation';
 
 interface PdfUploadProps {
   candidateId?: string;
-  onUploadSuccess?: (result: UploadResult) => void;
-  onUploadError?: (error: string) => void;
+  onFilesValidated?: (files: ValidatedFile[]) => void;
+  onValidationError?: (error: string) => void;
   maxFiles?: number;
   disabled?: boolean;
   className?: string;
 }
 
-interface UploadResult {
+export interface ValidatedFile {
+  file: File;
   fileName: string;
   fileSize: number;
-  blobName: string;
-  blobUrl: string;
-}
-
-interface UploadingFile {
-  file: File;
-  progress: number;
-  status: 'uploading' | 'success' | 'error';
+  status: 'validating' | 'valid' | 'invalid';
   error?: string;
-  result?: UploadResult;
 }
 
 export default function PdfUpload({
   candidateId,
-  onUploadSuccess,
-  onUploadError,
+  onFilesValidated,
+  onValidationError,
   maxFiles = 5,
   disabled = false,
   className = ''
 }: PdfUploadProps) {
-  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
+  const [validatedFiles, setValidatedFiles] = useState<ValidatedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,90 +38,83 @@ export default function PdfUpload({
     const fileArray = Array.from(files);
     
     // Validar número máximo de arquivos
-    if (uploadingFiles.length + fileArray.length > maxFiles) {
+    if (validatedFiles.length + fileArray.length > maxFiles) {
       const error = `Máximo de ${maxFiles} arquivos permitidos`;
-      onUploadError?.(error);
+      onValidationError?.(error);
       return;
     }
 
-    // Validar cada arquivo
-    const validFiles: File[] = [];
-    for (const file of fileArray) {
-      const validation = validatePdfFile(file);
-      if (validation.isValid) {
-        validFiles.push(file);
-      } else {
-        onUploadError?.(validation.error || 'Arquivo inválido');
-      }
-    }
-
-    if (validFiles.length === 0) return;
-
-    // Adicionar arquivos à lista de upload
-    const newUploadingFiles: UploadingFile[] = validFiles.map(file => ({
+    // Criar arquivos em estado de validação
+    const newValidatingFiles: ValidatedFile[] = fileArray.map(file => ({
       file,
-      progress: 0,
-      status: 'uploading'
+      fileName: file.name,
+      fileSize: file.size,
+      status: 'validating'
     }));
 
-    setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
+    setValidatedFiles(prev => [...prev, ...newValidatingFiles]);
 
-    // Fazer upload de cada arquivo
-    for (let i = 0; i < validFiles.length; i++) {
-      const file = validFiles[i];
-      await uploadFile(file, uploadingFiles.length + i);
-    }
-  };
-
-  const uploadFile = async (file: File, index: number) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      if (candidateId) {
-        formData.append('candidateId', candidateId);
-      }
-
-      const response = await fetch('/api/upload-pdf', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // Sucesso
-        setUploadingFiles(prev => prev.map((item, i) => 
-          i === index 
-            ? { ...item, status: 'success', progress: 100, result: result.data }
-            : item
-        ));
-        
-        onUploadSuccess?.(result.data);
-      } else {
-        // Erro
-        const errorMessage = result.error || 'Erro no upload';
-        setUploadingFiles(prev => prev.map((item, i) => 
-          i === index 
-            ? { ...item, status: 'error', error: errorMessage }
-            : item
-        ));
-        
-        onUploadError?.(errorMessage);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro de conexão';
-      setUploadingFiles(prev => prev.map((item, i) => 
-        i === index 
-          ? { ...item, status: 'error', error: errorMessage }
-          : item
-      ));
+    // Validar cada arquivo
+    const updatedFiles: ValidatedFile[] = [];
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const fileIndex = validatedFiles.length + i;
       
-      onUploadError?.(errorMessage);
+      try {
+        const validation = await validatePdfFile(file);
+        const updatedFile: ValidatedFile = {
+          file,
+          fileName: file.name,
+          fileSize: file.size,
+          status: validation.isValid ? 'valid' : 'invalid',
+          error: validation.error
+        };
+        
+        updatedFiles.push(updatedFile);
+        
+        // Atualizar estado individual do arquivo
+        setValidatedFiles(prev => prev.map((item, index) => 
+          index === fileIndex ? updatedFile : item
+        ));
+        
+        if (!validation.isValid) {
+          onValidationError?.(validation.error || 'Arquivo inválido');
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Erro na validação';
+        const updatedFile: ValidatedFile = {
+          file,
+          fileName: file.name,
+          fileSize: file.size,
+          status: 'invalid',
+          error: errorMessage
+        };
+        
+        updatedFiles.push(updatedFile);
+        
+        setValidatedFiles(prev => prev.map((item, index) => 
+          index === fileIndex ? updatedFile : item
+        ));
+        
+        onValidationError?.(errorMessage);
+      }
     }
+
+    // Notificar arquivos validados
+    setTimeout(() => {
+      const allValidFiles = [...validatedFiles, ...updatedFiles].filter(f => f.status === 'valid');
+      onFilesValidated?.(allValidFiles);
+    }, 100);
   };
 
   const removeFile = (index: number) => {
-    setUploadingFiles(prev => prev.filter((_, i) => i !== index));
+    setValidatedFiles(prev => {
+      const newFiles = prev.filter((_, i) => i !== index);
+      // Notificar arquivos validados atualizados
+      const validFiles = newFiles.filter(f => f.status === 'valid');
+      onFilesValidated?.(validFiles);
+      return newFiles;
+    });
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -209,13 +195,13 @@ export default function PdfUpload({
       </div>
 
       {/* Lista de Arquivos */}
-      {uploadingFiles.length > 0 && (
+      {validatedFiles.length > 0 && (
         <div className="mt-4 space-y-2">
           <h4 className="text-sm font-medium text-gray-900">
-            Arquivos ({uploadingFiles.length})
+            Arquivos ({validatedFiles.length})
           </h4>
           
-          {uploadingFiles.map((item, index) => (
+          {validatedFiles.map((item, index) => (
             <div
               key={index}
               className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -224,23 +210,33 @@ export default function PdfUpload({
                 <File className="h-5 w-5 text-red-500" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {item.file.name}
+                    {item.fileName}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {formatFileSize(item.file.size)}
+                    {formatFileSize(item.fileSize)}
                   </p>
+                  {item.status === 'valid' && (
+                    <p className="text-xs text-green-600">
+                      ✅ Validado e pronto para envio
+                    </p>
+                  )}
+                  {item.status === 'invalid' && item.error && (
+                    <p className="text-xs text-red-600">
+                      ❌ {item.error}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="flex items-center space-x-2">
                 {/* Status Icon */}
-                {item.status === 'uploading' && (
+                {item.status === 'validating' && (
                   <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
                 )}
-                {item.status === 'success' && (
+                {item.status === 'valid' && (
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 )}
-                {item.status === 'error' && (
+                {item.status === 'invalid' && (
                   <AlertCircle className="h-4 w-4 text-red-500" />
                 )}
 
@@ -251,7 +247,7 @@ export default function PdfUpload({
                     removeFile(index);
                   }}
                   className="p-1 hover:bg-gray-200 rounded"
-                  disabled={item.status === 'uploading'}
+                  disabled={item.status === 'validating'}
                 >
                   <X className="h-4 w-4 text-gray-400" />
                 </button>
@@ -262,21 +258,21 @@ export default function PdfUpload({
       )}
 
       {/* Mensagens de Erro */}
-      {uploadingFiles.some(f => f.status === 'error') && (
+      {validatedFiles.some(f => f.status === 'invalid') && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex">
             <AlertCircle className="h-5 w-5 text-red-400" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">
-                Alguns arquivos falharam no upload:
+                Alguns arquivos não passaram na validação:
               </h3>
               <div className="mt-2 text-sm text-red-700">
                 <ul className="list-disc list-inside space-y-1">
-                  {uploadingFiles
-                    .filter(f => f.status === 'error')
+                  {validatedFiles
+                    .filter(f => f.status === 'invalid')
                     .map((f, i) => (
                       <li key={i}>
-                        {f.file.name}: {f.error}
+                        {f.fileName}: {f.error}
                       </li>
                     ))
                   }
@@ -289,4 +285,3 @@ export default function PdfUpload({
     </div>
   );
 }
-

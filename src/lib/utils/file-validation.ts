@@ -76,10 +76,52 @@ export function validateFile(file: File, constraints: FileConstraints): FileVali
 }
 
 /**
- * Valida especificamente arquivos PDF
+ * Valida especificamente arquivos PDF com verificação de magic number
  */
-export function validatePdfFile(file: File): FileValidationResult {
-  return validateFile(file, PDF_CONSTRAINTS);
+export async function validatePdfFile(file: File): Promise<FileValidationResult> {
+  // Primeiro, validação básica
+  const basicValidation = validateFile(file, PDF_CONSTRAINTS);
+  if (!basicValidation.isValid) {
+    return basicValidation;
+  }
+
+  // Verificar magic number do PDF
+  try {
+    const magicNumberValid = await validatePdfMagicNumber(file);
+    if (!magicNumberValid) {
+      return {
+        isValid: false,
+        error: 'Arquivo não é um PDF válido. Verifique se o arquivo não foi renomeado.'
+      };
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      error: 'Erro ao validar arquivo PDF'
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Verifica se o arquivo tem o magic number correto de PDF
+ */
+async function validatePdfMagicNumber(file: File): Promise<boolean> {
+  try {
+    // Ler os primeiros 8 bytes do arquivo
+    const arrayBuffer = await fileToArrayBuffer(file.slice(0, 8));
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Converter para string
+    const header = String.fromCharCode(...uint8Array);
+    
+    // Verificar se começa com %PDF-
+    return header.startsWith('%PDF-');
+  } catch (error) {
+    console.error('Erro ao verificar magic number do PDF:', error);
+    return false;
+  }
 }
 
 /**
@@ -180,4 +222,3 @@ export function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
     reader.onerror = error => reject(error);
   });
 }
-
