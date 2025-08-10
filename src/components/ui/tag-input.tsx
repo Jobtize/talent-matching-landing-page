@@ -114,6 +114,10 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               placeholder={value.length === 0 ? placeholder : ""}
               className="flex-1 min-w-[120px] bg-transparent outline-none placeholder:text-gray-500"
+              autoComplete="off"
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore="true"
             />
           </div>
         </div>

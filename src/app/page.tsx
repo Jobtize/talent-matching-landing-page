@@ -443,7 +443,7 @@ export default function JobtizeLanding() {
                   <div className="h-12 bg-blue-100 rounded-md animate-pulse"></div>
                 </div>
               }>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
                 <div className="relative">
                   <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                   <Input
@@ -453,6 +453,8 @@ export default function JobtizeLanding() {
                     value={formData.nome}
                     onChange={handleInputChange}
                     className="pl-10"
+                    autoComplete="off"
+                    data-form-type="other"
                     required
                   />
                 </div>
@@ -467,6 +469,10 @@ export default function JobtizeLanding() {
                       value={formData.email}
                       onChange={handleInputChange}
                       className="pl-10"
+                      autoComplete="off"
+                      data-form-type="other"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
                       required
                     />
                   </div>
@@ -478,6 +484,10 @@ export default function JobtizeLanding() {
                       value={formData.telefone}
                       onChange={handleInputChange}
                       className="pl-10"
+                      autoComplete="off"
+                      data-form-type="other"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
                       required
                     />
                   </div>
@@ -492,6 +502,8 @@ export default function JobtizeLanding() {
                     value={formData.cargo}
                     onChange={handleInputChange}
                     className="pl-10"
+                    autoComplete="off"
+                    data-form-type="other"
                     required
                   />
                 </div>
@@ -504,6 +516,8 @@ export default function JobtizeLanding() {
                     className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                       formData.experiencia ? 'text-gray-900' : 'text-gray-500'
                     }`}
+                    autoComplete="off"
+                    data-form-type="other"
                     required
                   >
                     <option value="">Experiência</option>
