@@ -158,8 +158,8 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             mapIntegration.clearMap()
             
             // Determinar qual localização usar
-            let locationToUse = selectedLocation || SAO_PAULO_CENTER
-            let markerTitle = selectedLocation?.address || 'São Paulo - SP, Brasil'
+            const locationToUse = selectedLocation || SAO_PAULO_CENTER
+            const markerTitle = selectedLocation ? 'Localização selecionada' : 'São Paulo - SP, Brasil'
             
             console.log('🗺️ Localização escolhida:', locationToUse)
             console.log('🗺️ Título do marcador:', markerTitle)
