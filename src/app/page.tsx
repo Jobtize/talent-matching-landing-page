@@ -8,6 +8,7 @@ import { LocationInput, LocationInputRef } from '@/components/ui/location-input'
 import { TagInput } from '@/components/ui/tag-input'
 import { JobtizeLogo } from '@/components/ui/jobtize-logo'
 import PdfUpload, { ValidatedFile, PdfUploadRef } from '@/components/ui/pdf-upload'
+import { ThankYouModal } from '@/components/ui/thank-you-modal'
 import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
@@ -92,6 +93,7 @@ export default function JobtizeLanding() {
   const [showUpdateModal, setShowUpdateModal] = useState(false)
   const [existingUserData, setExistingUserData] = useState<ExistingUserData | null>(null)
   const [pendingFormData, setPendingFormData] = useState<PendingFormData | null>(null)
+  const [showThankYouModal, setShowThankYouModal] = useState(false)
   
   // Refs para os componentes
   const pdfUploadRef = useRef<PdfUploadRef>(null)
@@ -259,8 +261,8 @@ export default function JobtizeLanding() {
           }
         }
 
-        setSubmitStatus('success')
-        setSubmitMessage(`Dados atualizados com sucesso! Obrigado, ${result.data.nome}. Suas informações foram atualizadas em nossa base.`)
+        // Mostrar modal de sucesso para update
+        setShowThankYouModal(true)
         
         // Reset do formulário após sucesso
         setFormData({
@@ -392,9 +394,8 @@ export default function JobtizeLanding() {
         }
       }
       
-      // Sucesso completo
-      setSubmitStatus('success')
-      setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
+      // Mostrar modal de sucesso para cadastro
+      setShowThankYouModal(true)
         
       // Reset do formulário após sucesso
       setFormData({
@@ -885,6 +886,16 @@ export default function JobtizeLanding() {
           </div>
         </div>
       </footer>
+
+      {/* Thank You Modal */}
+      <ThankYouModal
+        isOpen={showThankYouModal}
+        onClose={() => setShowThankYouModal(false)}
+        title="Cadastro Recebido!"
+        message="O primeiro passo para sua próxima grande oportunidade de carreira foi dado."
+        whatsappUrl="https://chat.whatsapp.com/your-community-link"
+        ctaText="Entrar na Comunidade WhatsApp"
+      />
     </div>
   )
 }
