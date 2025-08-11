@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { track } from '@vercel/analytics'
 import { X, CheckCircle, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -25,6 +26,12 @@ export function ThankYouModal({
   if (!isOpen) return null
 
   const handleWhatsAppClick = () => {
+    // Tracking do clique no WhatsApp
+    track('whatsapp_click', {
+      source: 'thank_you_modal',
+      url: whatsappUrl
+    })
+    
     window.open(whatsappUrl, '_blank')
     onClose()
   }
