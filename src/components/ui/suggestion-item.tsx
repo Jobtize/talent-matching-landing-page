@@ -49,8 +49,8 @@ export const SuggestionItem = React.forwardRef<HTMLDivElement, SuggestionItemPro
         }}
         className={cn(
           "w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2 cursor-pointer",
-          "hover:bg-accent hover:text-accent-foreground",
-          isHighlighted && "bg-accent text-accent-foreground",
+          "hover:bg-gray-100 hover:text-gray-900",
+          isHighlighted && "bg-gray-100 text-gray-900",
           className
         )}
         role="option"
@@ -62,7 +62,7 @@ export const SuggestionItem = React.forwardRef<HTMLDivElement, SuggestionItemPro
             {mainText}
           </div>
           {secondaryText && (
-            <div className="text-xs text-muted-foreground truncate" title={secondaryText}>
+            <div className="text-xs text-gray-500 truncate" title={secondaryText}>
               {secondaryText}
             </div>
           )}

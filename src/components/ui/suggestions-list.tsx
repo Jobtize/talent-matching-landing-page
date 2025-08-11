@@ -77,7 +77,7 @@ export const SuggestionsList = React.forwardRef<HTMLDivElement, SuggestionsListP
       <div
         ref={ref}
         className={cn(
-          "absolute z-10 w-full mt-1 bg-background border border-input rounded-md shadow-lg overflow-y-auto",
+          "absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg overflow-y-auto",
           maxHeight,
           className
         )}
@@ -95,7 +95,7 @@ export const SuggestionsList = React.forwardRef<HTMLDivElement, SuggestionsListP
             />
           ))
         ) : showEmptyMessage ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground text-center">
+          <div className="px-3 py-2 text-sm text-gray-500 text-center">
             {emptyMessage}
           </div>
         ) : null}

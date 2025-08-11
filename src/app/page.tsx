@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
-import { LocationInput } from '@/components/ui/location-input'
+import { LocationInput, LocationInputRef } from '@/components/ui/location-input'
 import { TagInput } from '@/components/ui/tag-input'
 import { JobtizeLogo } from '@/components/ui/jobtize-logo'
+import PdfUpload, { ValidatedFile, PdfUploadRef } from '@/components/ui/pdf-upload'
+import { ThankYouModal } from '@/components/ui/thank-you-modal'
 import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
@@ -18,7 +20,9 @@ import {
   User,
   Code2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Download,
+  FileText
 } from 'lucide-react'
 
 interface FormData {
@@ -33,6 +37,13 @@ interface FormData {
   curriculo?: File | null
 }
 
+interface UploadedFile {
+  fileName: string
+  fileSize: number
+  blobName: string
+  blobUrl: string
+}
+
 interface ExistingUserData {
   nome: string
   email: string
@@ -42,6 +53,10 @@ interface ExistingUserData {
   localizacao?: string
   areas?: string
   created_at: string
+  // Informações do arquivo PDF (se houver)
+  file_name?: string
+  blob_url?: string
+  file_size?: number
 }
 
 interface PendingFormData {
@@ -71,11 +86,18 @@ export default function JobtizeLanding() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = useState('')
+  const [validatedFiles, setValidatedFiles] = useState<ValidatedFile[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   
   // Estados para modal de confirmação de atualização
   const [showUpdateModal, setShowUpdateModal] = useState(false)
   const [existingUserData, setExistingUserData] = useState<ExistingUserData | null>(null)
   const [pendingFormData, setPendingFormData] = useState<PendingFormData | null>(null)
+  const [showThankYouModal, setShowThankYouModal] = useState(false)
+  
+  // Refs para os componentes
+  const pdfUploadRef = useRef<PdfUploadRef>(null)
+  const locationInputRef = useRef<LocationInputRef>(null)
 
   // Função para sanitizar texto e prevenir XSS
   const sanitizeText = (text: string): string => {
@@ -118,6 +140,70 @@ export default function JobtizeLanding() {
     }))
   }
 
+  // Handlers para validação de PDF
+  const handleFilesValidated = (files: ValidatedFile[]) => {
+    setValidatedFiles(files)
+  }
+
+  const handleValidationError = (error: string) => {
+    console.error('Erro na validação de PDF:', error)
+    // Você pode mostrar uma notificação de erro aqui se desejar
+  }
+
+  // Função para fazer upload dos arquivos validados
+  // Nova função que faz upload direto com candidateId
+  const uploadValidatedFilesWithCandidateId = async (candidateId: string): Promise<UploadedFile[]> => {
+    const validFiles = validatedFiles.filter(f => f.status === 'valid')
+    if (validFiles.length === 0) return []
+
+    const uploadPromises = validFiles.map(async (validatedFile) => {
+      const formData = new FormData()
+      formData.append('file', validatedFile.file)
+      formData.append('candidateId', candidateId)
+
+      const response = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erro no upload do arquivo')
+      }
+
+      return result.data as UploadedFile
+    })
+
+    return Promise.all(uploadPromises)
+  }
+
+  // Função antiga mantida para compatibilidade (não usada no novo fluxo)
+  const uploadValidatedFiles = async (): Promise<UploadedFile[]> => {
+    const validFiles = validatedFiles.filter(f => f.status === 'valid')
+    if (validFiles.length === 0) return []
+
+    const uploadPromises = validFiles.map(async (validatedFile) => {
+      const formData = new FormData()
+      formData.append('file', validatedFile.file)
+
+      const response = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erro no upload do arquivo')
+      }
+
+      return result.data as UploadedFile
+    })
+
+    return Promise.all(uploadPromises)
+  }
+
   // Função para confirmar atualização dos dados
   const handleConfirmUpdate = async () => {
     if (!pendingFormData) return
@@ -139,8 +225,44 @@ export default function JobtizeLanding() {
       const result = await response.json()
       
       if (response.ok) {
-        setSubmitStatus('success')
-        setSubmitMessage(`Dados atualizados com sucesso! Obrigado, ${result.data.nome}. Suas informações foram atualizadas em nossa base.`)
+        // Se há PDF enviado, substituir o PDF existente do candidato
+        if (validatedFiles.length > 0 && result.data.id) {
+          try {
+            setSubmitMessage('Substituindo currículo...')
+            
+            // Primeiro, excluir PDFs existentes do candidato
+            console.log('Deletando PDFs existentes para candidato:', result.data.id)
+            const deleteResponse = await fetch(`/api/candidate-files/${result.data.id}`, {
+              method: 'DELETE',
+            });
+
+            const deleteResult = await deleteResponse.json()
+            console.log('Resultado da deleção:', deleteResult)
+
+            if (!deleteResponse.ok) {
+              console.warn('Erro ao deletar PDFs existentes:', deleteResult)
+              console.warn('Mas continuando com upload...')
+            } else {
+              console.log('PDFs antigos deletados com sucesso')
+            }
+
+            // Segundo, fazer upload do novo PDF
+            const uploadedPdfFiles = await uploadValidatedFilesWithCandidateId(result.data.id)
+            
+            if (uploadedPdfFiles.length === 0) {
+              throw new Error('Falha ao fazer upload do novo PDF')
+            }
+
+            console.log('PDF substituído com sucesso:', uploadedPdfFiles[0])
+          } catch (error) {
+            console.error('Erro ao substituir PDF do candidato:', error)
+            // Não falha a atualização por causa do PDF, mas mostra warning
+            setSubmitMessage('Dados atualizados, mas houve problema com o PDF')
+          }
+        }
+
+        // Mostrar modal de sucesso para update
+        setShowThankYouModal(true)
         
         // Reset do formulário após sucesso
         setFormData({
@@ -154,6 +276,19 @@ export default function JobtizeLanding() {
           tecnologias: [],
           curriculo: null
         })
+        setUploadedFiles([])
+        
+        // Limpar arquivos validados e resetar input file
+        setValidatedFiles([])
+        setUploadedFiles([])
+        
+        // Resetar componentes usando refs
+        if (pdfUploadRef.current) {
+          pdfUploadRef.current.reset()
+        }
+        if (locationInputRef.current) {
+          locationInputRef.current.reset()
+        }
       } else {
         setSubmitStatus('error')
         setSubmitMessage(result.error || 'Erro ao atualizar dados. Tente novamente.')
@@ -186,7 +321,12 @@ export default function JobtizeLanding() {
     setSubmitStatus('idle')
     setSubmitMessage('')
     
+    let createdCandidateId: string | null = null
+    
     try {
+      // Primeiro, criar o candidato
+      setSubmitMessage('Criando candidato...')
+      
       // Preparar dados para envio (excluindo currículo por enquanto)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { curriculo, ...formDataWithoutFile } = formData
@@ -210,44 +350,74 @@ export default function JobtizeLanding() {
       
       const result = await response.json()
       
-      if (response.ok) {
-        setSubmitStatus('success')
-        setSubmitMessage(`Cadastro realizado com sucesso! Obrigado, ${result.data.nome}. Entraremos em contato em breve.`)
-        
-        // Reset do formulário após sucesso
-        setFormData({
-          nome: '',
-          email: '',
-          telefone: '',
-          cargo: '',
-          experiencia: '',
-          localizacao: '',
-          areas: '',
-          tecnologias: [],
-          curriculo: null
-        })
-      } else {
+      if (!response.ok) {
         // Tratamento específico para email duplicado
-        if (result.code === 'EMAIL_ALREADY_EXISTS' && result.existingData) {
+        if (response.status === 409 && result.code === 'EMAIL_ALREADY_EXISTS' && result.existingData) {
           setExistingUserData(result.existingData)
           setPendingFormData(dataToSend)
           setShowUpdateModal(true)
+          setIsSubmitting(false)
           return
         }
         
-        setSubmitStatus('error')
+        throw new Error(result.error || 'Erro ao criar candidato')
+      }
+      
+      createdCandidateId = result.data.id
+      console.log('Candidato criado com ID:', createdCandidateId)
+      
+      // Segundo, fazer upload dos arquivos PDF (se houver)
+      let uploadedPdfFiles: UploadedFile[] = []
+      if (validatedFiles.length > 0 && createdCandidateId) {
+        setSubmitMessage('Enviando arquivos...')
         
-        // Mensagens específicas para diferentes tipos de erro
-        switch (result.code) {
-          case 'EMAIL_ALREADY_EXISTS':
-            setSubmitMessage('Este email já está cadastrado. Tente com outro email ou entre em contato conosco.')
-            break
-          case 'DATABASE_CONNECTION_ERROR':
-            setSubmitMessage('Erro de conexão. Verifique sua internet e tente novamente.')
-            break
-          default:
-            setSubmitMessage(result.error || 'Erro ao processar cadastro. Tente novamente.')
+        try {
+          uploadedPdfFiles = await uploadValidatedFilesWithCandidateId(createdCandidateId)
+          setUploadedFiles(uploadedPdfFiles)
+        } catch (error) {
+          console.error('Erro no upload dos arquivos:', error)
+          
+          // Rollback: deletar candidato criado
+          try {
+            await fetch(`/api/candidates/${createdCandidateId}`, {
+              method: 'DELETE',
+            })
+            console.log('Candidato deletado devido a erro no upload')
+          } catch (deleteError) {
+            console.error('Erro ao deletar candidato:', deleteError)
+          }
+          
+          setSubmitStatus('error')
+          setSubmitMessage('Erro no upload dos arquivos. Candidato não foi criado.')
+          setIsSubmitting(false)
+          return
         }
+      }
+      
+      // Mostrar modal de sucesso para cadastro
+      setShowThankYouModal(true)
+        
+      // Reset do formulário após sucesso
+      setFormData({
+        nome: '',
+        email: '',
+        telefone: '',
+        cargo: '',
+        experiencia: '',
+        localizacao: '',
+        areas: '',
+        tecnologias: [],
+        curriculo: null
+      })
+      setValidatedFiles([])
+      setUploadedFiles([])
+      
+      // Resetar componentes usando refs
+      if (pdfUploadRef.current) {
+        pdfUploadRef.current.reset()
+      }
+      if (locationInputRef.current) {
+        locationInputRef.current.reset()
       }
     } catch (error) {
       console.error('Erro ao enviar formulário:', error)
@@ -321,7 +491,7 @@ export default function JobtizeLanding() {
                   <div className="h-12 bg-blue-100 rounded-md animate-pulse"></div>
                 </div>
               }>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
                 <div className="relative">
                   <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                   <Input
@@ -331,6 +501,8 @@ export default function JobtizeLanding() {
                     value={formData.nome}
                     onChange={handleInputChange}
                     className="pl-10"
+                    autoComplete="off"
+                    data-form-type="other"
                     required
                   />
                 </div>
@@ -345,6 +517,10 @@ export default function JobtizeLanding() {
                       value={formData.email}
                       onChange={handleInputChange}
                       className="pl-10"
+                      autoComplete="off"
+                      data-form-type="other"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
                       required
                     />
                   </div>
@@ -356,6 +532,10 @@ export default function JobtizeLanding() {
                       value={formData.telefone}
                       onChange={handleInputChange}
                       className="pl-10"
+                      autoComplete="off"
+                      data-form-type="other"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
                       required
                     />
                   </div>
@@ -370,6 +550,8 @@ export default function JobtizeLanding() {
                     value={formData.cargo}
                     onChange={handleInputChange}
                     className="pl-10"
+                    autoComplete="off"
+                    data-form-type="other"
                     required
                   />
                 </div>
@@ -379,7 +561,11 @@ export default function JobtizeLanding() {
                     name="experiencia"
                     value={formData.experiencia}
                     onChange={handleInputChange}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                      formData.experiencia ? 'text-gray-900' : 'text-gray-500'
+                    }`}
+                    autoComplete="off"
+                    data-form-type="other"
                     required
                   >
                     <option value="">Experiência</option>
@@ -389,6 +575,7 @@ export default function JobtizeLanding() {
                   </select>
 
                   <LocationInput
+                    ref={locationInputRef}
                     value={formData.localizacao}
                     onChange={handleLocationChange}
                     placeholder="Localização"
@@ -416,22 +603,28 @@ export default function JobtizeLanding() {
                 </div>
 
                 {/* Campo de Currículo */}
+                {/* Upload de PDF */}
                 <div className="space-y-2">
-                  <label htmlFor="curriculo" className="block text-sm font-medium text-gray-700">
-                    Currículo (PDF, DOC, DOCX) - Opcional
+                  <label className="block text-sm font-medium text-gray-700">
+                    📄 Currículo (PDF) - Opcional
                   </label>
-                  <input
-                    id="curriculo"
-                    name="curriculo"
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleCurriculoChange}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded-md"
+                  <PdfUpload
+                    ref={pdfUploadRef}
+                    onFilesValidated={handleFilesValidated}
+                    onValidationError={handleValidationError}
+                    maxFiles={1}
+                    disabled={isSubmitting}
+                    className="w-full"
                   />
-                  {formData.curriculo && (
-                    <p className="text-sm text-green-600">
-                      ✓ Arquivo selecionado: {formData.curriculo.name}
-                    </p>
+                  <p className="text-xs text-gray-500">
+                    Envie seu currículo em PDF (máximo 1 arquivo, 10MB)
+                  </p>
+                  {uploadedFiles.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs text-green-600">
+                        ✅ Currículo enviado com sucesso
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -504,6 +697,11 @@ export default function JobtizeLanding() {
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Encontramos um cadastro com este email. Deseja atualizar seus dados?
+                  {validatedFiles.length > 0 && (
+                    <span className="block mt-2 text-amber-600 font-medium">
+                      ⚠️ {existingUserData.file_name ? 'O currículo atual será substituído' : 'Um novo currículo será adicionado'} pelo arquivo enviado.
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -533,6 +731,37 @@ export default function JobtizeLanding() {
                 </p>
               </div>
             </div>
+
+            {/* Seção do PDF atual (se houver) */}
+            {existingUserData.file_name && existingUserData.blob_url && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Currículo atual
+                </h4>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-800 font-medium">
+                      {existingUserData.file_name}
+                    </p>
+                    {existingUserData.file_size && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        {(existingUserData.file_size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    )}
+                  </div>
+                  <a
+                    href={existingUserData.blob_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md transition-colors"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Baixar
+                  </a>
+                </div>
+              </div>
+            )}
             
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
@@ -657,6 +886,16 @@ export default function JobtizeLanding() {
           </div>
         </div>
       </footer>
+
+      {/* Thank You Modal */}
+      <ThankYouModal
+        isOpen={showThankYouModal}
+        onClose={() => setShowThankYouModal(false)}
+        title="Cadastro Recebido!"
+        message="O primeiro passo para sua próxima grande oportunidade de carreira foi dado."
+        whatsappUrl="https://chat.whatsapp.com/Ct9gWNByZk53wXMZfbNdxU"
+        ctaText="Entrar na Comunidade WhatsApp"
+      />
     </div>
   )
 }

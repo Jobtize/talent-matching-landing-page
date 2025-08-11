@@ -82,14 +82,14 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
     return (
       <div ref={ref} className={cn("relative", className)}>
         <div
-          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          className="flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 ring-offset-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
           onClick={() => inputRef.current?.focus()}
         >
           <div className="flex flex-wrap gap-2 flex-1">
             {value.map((tag, index) => (
               <span
                 key={index}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-sm font-medium"
+                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium border border-blue-200"
               >
                 {tag}
                 <button
@@ -98,7 +98,7 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
                     e.stopPropagation()
                     removeTag(index)
                   }}
-                  className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                  className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-1"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -113,13 +113,17 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
               onFocus={() => setShowSuggestions(inputValue.length > 0)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               placeholder={value.length === 0 ? placeholder : ""}
-              className="flex-1 min-w-[120px] bg-transparent outline-none placeholder:text-muted-foreground"
+              className="flex-1 min-w-[120px] bg-transparent outline-none placeholder:text-gray-500"
+              autoComplete="off"
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore="true"
             />
           </div>
         </div>
 
         {showSuggestions && filteredSuggestions.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-background border border-input rounded-md shadow-lg max-h-48 overflow-y-auto">
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
             {filteredSuggestions.slice(0, 10).map((suggestion, index) => (
               <button
                 key={index}

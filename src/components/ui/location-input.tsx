@@ -16,6 +16,10 @@ export interface LocationInputProps {
   className?: string
 }
 
+export interface LocationInputRef {
+  reset: () => void
+}
+
 // Interfaces para tipos do Google Maps (mantidas para compatibilidade)
 interface GooglePlaceResult {
   types?: string[]
@@ -30,7 +34,7 @@ interface SearchNearbyResult {
 // Coordenadas do centro de São Paulo (Praça da Sé)
 const SAO_PAULO_CENTER = { lat: -23.5505, lng: -46.6333 }
 
-const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
+const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
   ({ value, onChange, placeholder, className }, ref) => {
     // Estados locais
     const [inputValue, setInputValue] = React.useState(value)
@@ -56,6 +60,27 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     const mapIntegration = useMapIntegration({
       apiKey: googleMapsValidation.apiKey
     })
+
+    // Expor função reset para o componente pai
+    React.useImperativeHandle(ref, () => ({
+      reset: () => {
+        // Resetar todos os estados
+        setInputValue('')
+        onChange('')
+        setShowSuggestions(false)
+        setShowMap(false)
+        setAutoShowMap(true)
+        setSelectedLocation(null)
+        setLastMapLocation(null)
+        
+        // Limpar mapa e marcadores
+        mapIntegration.clearMap()
+        mapIntegration.clearMarker()
+        
+        // Limpar sugestões
+        locationSearch.clearSuggestions()
+      }
+    }), [onChange, mapIntegration, locationSearch])
 
     // Converter sugestões para o formato esperado pelo SuggestionsList
     const suggestionData: SuggestionData[] = React.useMemo(() => 
@@ -417,7 +442,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     }, [selectedLocation, inputValue, autoShowMap, hasValidLocation])
 
     return (
-      <div ref={ref} className={cn("relative", className)}>
+      <div className={cn("relative", className)}>
         <div className="relative">
           <MapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
           <input
@@ -429,7 +454,11 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
             onFocus={() => setShowSuggestions(suggestionData.length > 0)}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 pr-24 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 pl-10 pr-24 text-sm text-gray-900 ring-offset-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            autoComplete="off"
+            data-form-type="other"
+            data-lpignore="true"
+            data-1p-ignore="true"
           />
           
           <div className="absolute right-2 top-2 flex items-center gap-1">
