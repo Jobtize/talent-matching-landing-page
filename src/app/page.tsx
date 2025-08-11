@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
-import { LocationInput } from '@/components/ui/location-input'
+import { LocationInput, LocationInputRef } from '@/components/ui/location-input'
 import { TagInput } from '@/components/ui/tag-input'
 import { JobtizeLogo } from '@/components/ui/jobtize-logo'
 import PdfUpload, { ValidatedFile, PdfUploadRef } from '@/components/ui/pdf-upload'
@@ -93,8 +93,9 @@ export default function JobtizeLanding() {
   const [existingUserData, setExistingUserData] = useState<ExistingUserData | null>(null)
   const [pendingFormData, setPendingFormData] = useState<PendingFormData | null>(null)
   
-  // Ref para o componente PDF Upload
+  // Refs para os componentes
   const pdfUploadRef = useRef<PdfUploadRef>(null)
+  const locationInputRef = useRef<LocationInputRef>(null)
 
   // Função para sanitizar texto e prevenir XSS
   const sanitizeText = (text: string): string => {
@@ -279,9 +280,12 @@ export default function JobtizeLanding() {
         setValidatedFiles([])
         setUploadedFiles([])
         
-        // Resetar componente PDF Upload usando ref
+        // Resetar componentes usando refs
         if (pdfUploadRef.current) {
           pdfUploadRef.current.reset()
+        }
+        if (locationInputRef.current) {
+          locationInputRef.current.reset()
         }
       } else {
         setSubmitStatus('error')
@@ -407,9 +411,12 @@ export default function JobtizeLanding() {
       setValidatedFiles([])
       setUploadedFiles([])
       
-      // Resetar componente PDF Upload usando ref
+      // Resetar componentes usando refs
       if (pdfUploadRef.current) {
         pdfUploadRef.current.reset()
+      }
+      if (locationInputRef.current) {
+        locationInputRef.current.reset()
       }
     } catch (error) {
       console.error('Erro ao enviar formulário:', error)
@@ -567,6 +574,7 @@ export default function JobtizeLanding() {
                   </select>
 
                   <LocationInput
+                    ref={locationInputRef}
                     value={formData.localizacao}
                     onChange={handleLocationChange}
                     placeholder="Localização"

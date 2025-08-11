@@ -110,7 +110,8 @@ export async function validatePdfFile(file: File): Promise<FileValidationResult>
 async function validatePdfMagicNumber(file: File): Promise<boolean> {
   try {
     // Ler os primeiros 8 bytes do arquivo
-    const arrayBuffer = await fileToArrayBuffer(file.slice(0, 8));
+    const blob = file.slice(0, 8);
+    const arrayBuffer = await blob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     
     // Converter para string

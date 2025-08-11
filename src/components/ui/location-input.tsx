@@ -16,6 +16,10 @@ export interface LocationInputProps {
   className?: string
 }
 
+export interface LocationInputRef {
+  reset: () => void
+}
+
 // Interfaces para tipos do Google Maps (mantidas para compatibilidade)
 interface GooglePlaceResult {
   types?: string[]
@@ -30,7 +34,7 @@ interface SearchNearbyResult {
 // Coordenadas do centro de São Paulo (Praça da Sé)
 const SAO_PAULO_CENTER = { lat: -23.5505, lng: -46.6333 }
 
-const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
+const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
   ({ value, onChange, placeholder, className }, ref) => {
     // Estados locais
     const [inputValue, setInputValue] = React.useState(value)
@@ -56,6 +60,27 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     const mapIntegration = useMapIntegration({
       apiKey: googleMapsValidation.apiKey
     })
+
+    // Expor função reset para o componente pai
+    React.useImperativeHandle(ref, () => ({
+      reset: () => {
+        // Resetar todos os estados
+        setInputValue('')
+        onChange('')
+        setShowSuggestions(false)
+        setShowMap(false)
+        setAutoShowMap(true)
+        setSelectedLocation(null)
+        setLastMapLocation(null)
+        
+        // Limpar mapa e marcadores
+        mapIntegration.clearMap()
+        mapIntegration.clearMarker()
+        
+        // Limpar sugestões
+        locationSearch.clearSuggestions()
+      }
+    }), [onChange, mapIntegration, locationSearch])
 
     // Converter sugestões para o formato esperado pelo SuggestionsList
     const suggestionData: SuggestionData[] = React.useMemo(() => 
@@ -417,7 +442,7 @@ const LocationInput = React.forwardRef<HTMLDivElement, LocationInputProps>(
     }, [selectedLocation, inputValue, autoShowMap, hasValidLocation])
 
     return (
-      <div ref={ref} className={cn("relative", className)}>
+      <div className={cn("relative", className)}>
         <div className="relative">
           <MapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
           <input

@@ -8,9 +8,10 @@ import { deleteBlobFile } from '@/lib/azure-storage';
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const candidateId = parseInt(params.id);
     
     if (isNaN(candidateId)) {
