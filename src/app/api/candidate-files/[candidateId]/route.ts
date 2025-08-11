@@ -125,7 +125,7 @@ export async function DELETE(
         .input('candidateId', sql.Int, candidateId)
         .query(`
           UPDATE candidate_files 
-          SET status = 'deleted', updated_at = GETDATE()
+          SET status = 'deleted'
           WHERE candidate_id = @candidateId AND status = 'active'
         `);
 
@@ -177,7 +177,7 @@ export async function DELETE(
       .input('fileId', sql.Int, parseInt(fileId))
       .query(`
         UPDATE candidate_files 
-        SET status = 'deleted', updated_at = GETDATE()
+        SET status = 'deleted'
         WHERE id = @fileId
       `);
 

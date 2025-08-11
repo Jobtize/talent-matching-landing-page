@@ -47,8 +47,7 @@ export async function insertOrUpdateCandidate(
           experiencia = @experiencia,
           localizacao = @localizacao,
           areas = @areas,
-          tecnologias = @tecnologias,
-          updated_at = GETDATE()
+          tecnologias = @tecnologias
         WHERE id = @id
       `);
 
