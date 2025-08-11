@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { track } from '@vercel/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
@@ -261,6 +262,14 @@ export default function JobtizeLanding() {
           }
         }
 
+        // Tracking de conversão para update
+        track('form_submission', {
+          type: 'update_candidate',
+          has_resume: validatedFiles.length > 0,
+          technologies_count: pendingFormData.tecnologias?.length || 0,
+          location: pendingFormData.localizacao || 'not_provided'
+        })
+        
         // Mostrar modal de sucesso para update
         setShowThankYouModal(true)
         
@@ -393,6 +402,14 @@ export default function JobtizeLanding() {
           return
         }
       }
+      
+      // Tracking de conversão
+      track('form_submission', {
+        type: 'new_candidate',
+        has_resume: validatedFiles.length > 0,
+        technologies_count: formData.tecnologias.length,
+        location: formData.localizacao || 'not_provided'
+      })
       
       // Mostrar modal de sucesso para cadastro
       setShowThankYouModal(true)
