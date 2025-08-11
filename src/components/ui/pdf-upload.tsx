@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Upload, File, X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { validatePdfFile } from '@/lib/utils/file-validation';
 import { formatFileSize } from '@/lib/utils/file-validation';
@@ -22,17 +22,31 @@ export interface ValidatedFile {
   error?: string;
 }
 
-export default function PdfUpload({
+export interface PdfUploadRef {
+  reset: () => void;
+}
+
+const PdfUpload = forwardRef<PdfUploadRef, PdfUploadProps>(({
   candidateId,
   onFilesValidated,
   onValidationError,
   maxFiles = 5,
   disabled = false,
   className = ''
-}: PdfUploadProps) {
+}, ref) => {
   const [validatedFiles, setValidatedFiles] = useState<ValidatedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Expor função reset para o componente pai
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      setValidatedFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }));
 
   const handleFiles = async (files: FileList) => {
     const fileArray = Array.from(files);
@@ -296,4 +310,8 @@ export default function PdfUpload({
       )}
     </div>
   );
-}
+});
+
+PdfUpload.displayName = 'PdfUpload';
+
+export default PdfUpload;

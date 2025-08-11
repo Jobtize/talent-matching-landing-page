@@ -120,12 +120,11 @@ export async function DELETE(
         }
       }
 
-      // Marcar todos como excluídos no banco (soft delete)
+      // Excluir todos os registros do banco (hard delete)
       await pool.request()
         .input('candidateId', sql.Int, candidateId)
         .query(`
-          UPDATE candidate_files 
-          SET status = 'deleted'
+          DELETE FROM candidate_files 
           WHERE candidate_id = @candidateId AND status = 'active'
         `);
 
@@ -172,12 +171,11 @@ export async function DELETE(
       console.warn(`Falha ao excluir blob ${fileRecord.blob_name}, mas continuando com exclusão do banco`);
     }
 
-    // Marcar como excluído no banco (soft delete)
+    // Excluir registro do banco (hard delete)
     await pool.request()
       .input('fileId', sql.Int, parseInt(fileId))
       .query(`
-        UPDATE candidate_files 
-        SET status = 'deleted'
+        DELETE FROM candidate_files 
         WHERE id = @fileId
       `);
 

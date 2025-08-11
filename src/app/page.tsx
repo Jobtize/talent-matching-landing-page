@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { LocationInput } from '@/components/ui/location-input'
 import { TagInput } from '@/components/ui/tag-input'
 import { JobtizeLogo } from '@/components/ui/jobtize-logo'
-import PdfUpload, { ValidatedFile } from '@/components/ui/pdf-upload'
+import PdfUpload, { ValidatedFile, PdfUploadRef } from '@/components/ui/pdf-upload'
 import ClientOnly from '@/components/ClientOnly'
 import { 
   Briefcase, 
@@ -92,6 +92,9 @@ export default function JobtizeLanding() {
   const [showUpdateModal, setShowUpdateModal] = useState(false)
   const [existingUserData, setExistingUserData] = useState<ExistingUserData | null>(null)
   const [pendingFormData, setPendingFormData] = useState<PendingFormData | null>(null)
+  
+  // Ref para o componente PDF Upload
+  const pdfUploadRef = useRef<PdfUploadRef>(null)
 
   // Função para sanitizar texto e prevenir XSS
   const sanitizeText = (text: string): string => {
@@ -274,9 +277,11 @@ export default function JobtizeLanding() {
         
         // Limpar arquivos validados e resetar input file
         setValidatedFiles([])
-        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-        if (fileInput) {
-          fileInput.value = ''
+        setUploadedFiles([])
+        
+        // Resetar componente PDF Upload usando ref
+        if (pdfUploadRef.current) {
+          pdfUploadRef.current.reset()
         }
       } else {
         setSubmitStatus('error')
@@ -402,10 +407,9 @@ export default function JobtizeLanding() {
       setValidatedFiles([])
       setUploadedFiles([])
       
-      // Resetar input file
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      if (fileInput) {
-        fileInput.value = ''
+      // Resetar componente PDF Upload usando ref
+      if (pdfUploadRef.current) {
+        pdfUploadRef.current.reset()
       }
     } catch (error) {
       console.error('Erro ao enviar formulário:', error)
@@ -596,6 +600,7 @@ export default function JobtizeLanding() {
                     📄 Currículo (PDF) - Opcional
                   </label>
                   <PdfUpload
+                    ref={pdfUploadRef}
                     onFilesValidated={handleFilesValidated}
                     onValidationError={handleValidationError}
                     maxFiles={1}
