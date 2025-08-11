@@ -52,7 +52,7 @@ export function ThankYouModal({
         {/* Content */}
         <div className="p-8 text-center">
           {/* Success Icon */}
-          <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center animate-in zoom-in-50 duration-500 delay-150">
+          <div className="mx-auto mb-6 w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center animate-in zoom-in-50 duration-500 delay-150">
             <CheckCircle className="w-8 h-8 text-white animate-in zoom-in-50 duration-300 delay-300" />
           </div>
 
@@ -74,8 +74,8 @@ export function ThankYouModal({
           <Button
             onClick={handleWhatsAppClick}
             className={cn(
-              "w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700",
-              "text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300",
+              "w-full bg-blue-600 hover:bg-blue-700",
+              "text-white font-semibold py-3 px-6 rounded-md transition-all duration-300",
               "shadow-lg hover:shadow-xl transform hover:scale-[1.02]",
               "animate-in slide-in-from-bottom-4 duration-500 delay-500"
             )}
@@ -96,4 +96,3 @@ export function ThankYouModal({
     </div>
   )
 }
-
