@@ -893,7 +893,7 @@ export default function JobtizeLanding() {
         onClose={() => setShowThankYouModal(false)}
         title="Cadastro Recebido!"
         message="O primeiro passo para sua próxima grande oportunidade de carreira foi dado."
-        whatsappUrl="https://chat.whatsapp.com/your-community-link"
+        whatsappUrl="https://chat.whatsapp.com/Ct9gWNByZk53wXMZfbNdxU"
         ctaText="Entrar na Comunidade WhatsApp"
       />
     </div>
