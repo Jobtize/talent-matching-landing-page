@@ -82,9 +82,11 @@ talent-matching-landing-page/
 ## 🔄 Roadmap
 
 - [ ] Integração com API backend
-- [ ] Validação de formulário com Zod
+- [x] Validação de formulário com Zod
 - [ ] Sistema de notificações
-- [ ] Analytics e tracking
+- [x] Analytics e tracking
+  - [x] Vercel Analytics
+  - [x] Google Analytics 4
 - [ ] Testes automatizados
 - [ ] Deploy na Vercel
 

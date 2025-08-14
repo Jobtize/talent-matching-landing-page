@@ -22,6 +22,11 @@ NEXT_PUBLIC_APP_URL=https://your-app.azurewebsites.net
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
+### 📊 Google Analytics (Opcional)
+```
+NEXT_PUBLIC_GA_MEASUREMENT_ID=your-ga-measurement-id
+```
+
 ## 🛠️ Como Configurar no Azure Portal
 
 ### 1. Acessar as Configurações do App Service

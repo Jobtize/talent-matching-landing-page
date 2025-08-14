@@ -3,6 +3,7 @@
 import React from 'react'
 import { track } from '@vercel/analytics'
 import { X, CheckCircle, MessageCircle } from 'lucide-react'
+import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -23,11 +24,20 @@ export function ThankYouModal({
   whatsappUrl = "https://chat.whatsapp.com/your-community-link",
   ctaText = "Entrar na Comunidade WhatsApp"
 }: ThankYouModalProps) {
+  // Hook do Google Analytics
+  const { sendEvent } = useGoogleAnalytics()
+  
   if (!isOpen) return null
 
   const handleWhatsAppClick = () => {
-    // Tracking do clique no WhatsApp
+    // Tracking do clique no WhatsApp (Vercel Analytics)
     track('whatsapp_click', {
+      source: 'thank_you_modal',
+      url: whatsappUrl
+    })
+    
+    // Tracking do clique no WhatsApp (Google Analytics)
+    sendEvent('whatsapp_click', {
       source: 'thank_you_modal',
       url: whatsappUrl
     })
