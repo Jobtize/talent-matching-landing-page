@@ -41,6 +41,15 @@ const environmentSchema = z.object({
       'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY deve ser uma chave válida (formato alfanumérico com pelo menos 35 caracteres)'
     )
     .optional(),
+    
+  NEXT_PUBLIC_GA_MEASUREMENT_ID: z
+    .string()
+    .min(1, 'NEXT_PUBLIC_GA_MEASUREMENT_ID não pode estar vazio')
+    .refine(
+      (val) => /^G-[A-Z0-9]{10}$/.test(val),
+      'NEXT_PUBLIC_GA_MEASUREMENT_ID deve ser um ID de medição válido do GA4 (formato G-XXXXXXXXXX)'
+    )
+    .optional(),
 
   // Azure Blob Storage
   AZURE_STORAGE_CONNECTION_STRING: z
