@@ -2,10 +2,12 @@
 
 import React from 'react'
 import { track } from '@vercel/analytics'
-import { X, CheckCircle, MessageCircle } from 'lucide-react'
+import { X, CheckCircle, MessageCircle, UserPlus, Linkedin } from 'lucide-react'
 import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import { FormStorageData } from '@/hooks/useFormStorage'
 
 interface ThankYouModalProps {
   isOpen: boolean
@@ -14,6 +16,7 @@ interface ThankYouModalProps {
   message?: string
   whatsappUrl?: string
   ctaText?: string
+  formData?: FormStorageData
 }
 
 export function ThankYouModal({
@@ -22,10 +25,12 @@ export function ThankYouModal({
   title = "Cadastro Recebido!",
   message = "O primeiro passo para sua próxima grande oportunidade de carreira foi dado.",
   whatsappUrl = "https://chat.whatsapp.com/your-community-link",
-  ctaText = "Entrar na Comunidade WhatsApp"
+  ctaText = "Entrar na Comunidade WhatsApp",
+  formData
 }: ThankYouModalProps) {
   // Hook do Google Analytics
   const { sendEvent } = useGoogleAnalytics()
+  const router = useRouter()
   
   if (!isOpen) return null
 
@@ -43,7 +48,36 @@ export function ThankYouModal({
     })
     
     window.open(whatsappUrl, '_blank')
-    onClose()
+  }
+
+  const handleCompleteRegistration = () => {
+    // Tracking do clique em completar cadastro
+    track('complete_registration_click', {
+      source: 'thank_you_modal'
+    })
+    
+    // Tracking do Google Analytics
+    sendEvent('complete_registration_click', {
+      source: 'thank_you_modal'
+    })
+    
+    // Redirecionar para a página de cadastro
+    router.push('/cadastro')
+  }
+
+  const handleLinkedInLogin = () => {
+    // Tracking do clique em login com LinkedIn
+    track('linkedin_login_click', {
+      source: 'thank_you_modal'
+    })
+    
+    // Tracking do Google Analytics
+    sendEvent('linkedin_login_click', {
+      source: 'thank_you_modal'
+    })
+    
+    // Redirecionar para a autenticação do LinkedIn
+    router.push('/api/auth/linkedin')
   }
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -84,27 +118,60 @@ export function ThankYouModal({
           </p>
 
           <p className="text-sm text-gray-500 mb-8 animate-in slide-in-from-bottom-4 duration-500 delay-400">
-            Para finalizar e ter acesso às vagas exclusivas, que tal fazer parte da nossa comunidade? É rápido e você será o primeiro a saber sobre as oportunidades que combinam com você!
+            Para finalizar e ter acesso às vagas exclusivas, crie sua conta ou faça login com LinkedIn.
           </p>
 
-          {/* CTA Button */}
-          <Button
-            onClick={handleWhatsAppClick}
-            className={cn(
-              "w-full bg-blue-600 hover:bg-blue-700",
-              "text-white font-semibold py-3 px-6 rounded-md transition-all duration-300",
-              "shadow-lg hover:shadow-xl transform hover:scale-[1.02]",
-              "animate-in slide-in-from-bottom-4 duration-500 delay-500"
-            )}
-          >
-            <MessageCircle className="w-5 h-5 mr-2" />
-            {ctaText}
-          </Button>
+          {/* Opções de Cadastro/Login */}
+          <div className="space-y-4 mb-6 animate-in slide-in-from-bottom-4 duration-500 delay-500">
+            {/* Botão de Completar Cadastro */}
+            <Button
+              onClick={handleCompleteRegistration}
+              className={cn(
+                "w-full bg-blue-600 hover:bg-blue-700",
+                "text-white font-semibold py-3 px-6 rounded-md transition-all duration-300",
+                "shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              )}
+            >
+              <UserPlus className="w-5 h-5 mr-2" />
+              Completar Meu Perfil Agora
+            </Button>
+
+            {/* Botão de Login com LinkedIn */}
+            <Button
+              onClick={handleLinkedInLogin}
+              className={cn(
+                "w-full bg-[#0077B5] hover:bg-[#006097]",
+                "text-white font-semibold py-3 px-6 rounded-md transition-all duration-300",
+                "shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              )}
+            >
+              <Linkedin className="w-5 h-5 mr-2" />
+              Continuar com LinkedIn
+            </Button>
+          </div>
+
+          {/* Opção de WhatsApp */}
+          <div className="pt-4 border-t border-gray-200 animate-in slide-in-from-bottom-4 duration-500 delay-600">
+            <p className="text-sm text-gray-500 mb-4">
+              Ou entre em nossa comunidade para receber atualizações:
+            </p>
+            <Button
+              onClick={handleWhatsAppClick}
+              variant="outline"
+              className={cn(
+                "w-full border-green-500 text-green-600 hover:bg-green-50",
+                "font-semibold py-3 px-6 rounded-md transition-all duration-300"
+              )}
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              {ctaText}
+            </Button>
+          </div>
 
           {/* Skip Option */}
           <button
             onClick={onClose}
-            className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors animate-in slide-in-from-bottom-4 duration-500 delay-600"
+            className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors animate-in slide-in-from-bottom-4 duration-500 delay-700"
           >
             Pular por agora
           </button>

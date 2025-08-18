@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { track } from '@vercel/analytics'
+import { useFormStorage } from '@/hooks/useFormStorage'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
@@ -83,6 +84,9 @@ export default function JobtizeLanding() {
     tecnologias: [],
     curriculo: null
   })
+  
+  // Hook para armazenar dados do formulário para uso posterior
+  const { saveFormData } = useFormStorage()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -403,6 +407,18 @@ export default function JobtizeLanding() {
           return
         }
       }
+      
+      // Salvar dados do formulário para uso posterior no cadastro
+      saveFormData({
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        cargo: formData.cargo,
+        experiencia: formData.experiencia,
+        localizacao: formData.localizacao,
+        areas: formData.areas,
+        tecnologias: formData.tecnologias
+      })
       
       // Tracking de conversão
       track('form_submission', {
