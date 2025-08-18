@@ -27,7 +27,7 @@ export interface PdfUploadRef {
 }
 
 const PdfUpload = forwardRef<PdfUploadRef, PdfUploadProps>(({
-  candidateId,
+  // candidateId não é usado neste componente
   onFilesValidated,
   onValidationError,
   maxFiles = 5,
