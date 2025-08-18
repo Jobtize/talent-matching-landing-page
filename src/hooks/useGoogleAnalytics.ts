@@ -24,7 +24,7 @@ export function useGoogleAnalytics() {
     // Também envia para o Vercel Analytics se disponível
     if (typeof window !== 'undefined' && window.va) {
       try {
-        // @ts-ignore - Vercel Analytics não tem tipagem oficial
+        // @ts-expect-error - Vercel Analytics não tem tipagem oficial
         window.va.track(eventName, params)
       } catch (error) {
         console.error('Erro ao enviar evento para Vercel Analytics:', error)
@@ -41,7 +41,6 @@ declare global {
     va?: {
       track: (eventName: string, params?: EventParams) => void
     }
-    gtag: (command: string, ...args: any[]) => void
+    gtag: (command: string, ...args: unknown[]) => void
   }
 }
-
