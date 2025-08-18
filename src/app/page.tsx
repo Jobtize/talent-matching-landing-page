@@ -133,13 +133,14 @@ export default function JobtizeLanding() {
     }))
   }
 
-  const handleCurriculoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    setFormData(prev => ({
-      ...prev,
-      curriculo: file
-    }))
-  }
+  // Função removida pois não é mais utilizada no novo fluxo
+  // const handleCurriculoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0] || null
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     curriculo: file
+  //   }))
+  // }
 
   // Handlers para validação de PDF
   const handleFilesValidated = (files: ValidatedFile[]) => {
@@ -179,31 +180,31 @@ export default function JobtizeLanding() {
     return Promise.all(uploadPromises)
   }
 
-  // Função antiga mantida para compatibilidade (não usada no novo fluxo)
-  const uploadValidatedFiles = async (): Promise<UploadedFile[]> => {
-    const validFiles = validatedFiles.filter(f => f.status === 'valid')
-    if (validFiles.length === 0) return []
-
-    const uploadPromises = validFiles.map(async (validatedFile) => {
-      const formData = new FormData()
-      formData.append('file', validatedFile.file)
-
-      const response = await fetch('/api/upload-pdf', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Erro no upload do arquivo')
-      }
-
-      return result.data as UploadedFile
-    })
-
-    return Promise.all(uploadPromises)
-  }
+  // Função antiga removida pois não é mais utilizada no novo fluxo
+  // const uploadValidatedFiles = async (): Promise<UploadedFile[]> => {
+  //   const validFiles = validatedFiles.filter(f => f.status === 'valid')
+  //   if (validFiles.length === 0) return []
+  //
+  //   const uploadPromises = validFiles.map(async (validatedFile) => {
+  //     const formData = new FormData()
+  //     formData.append('file', validatedFile.file)
+  //
+  //     const response = await fetch('/api/upload-pdf', {
+  //       method: 'POST',
+  //       body: formData,
+  //     })
+  //
+  //     const result = await response.json()
+  //
+  //     if (!response.ok || !result.success) {
+  //       throw new Error(result.error || 'Erro no upload do arquivo')
+  //     }
+  //
+  //     return result.data as UploadedFile
+  //   })
+  //
+  //   return Promise.all(uploadPromises)
+  // }
 
   // Função para confirmar atualização dos dados
   const handleConfirmUpdate = async () => {

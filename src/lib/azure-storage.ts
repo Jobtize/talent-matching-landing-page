@@ -1,4 +1,4 @@
-import { BlobServiceClient, ContainerClient, BlockBlobClient } from '@azure/storage-blob';
+import { BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
 import { requireEnvironmentVariables } from './env-validation';
 
 /**
@@ -161,7 +161,8 @@ export async function uploadPdfToBlob(
 /**
  * Gera URL de download temporária (SAS token) para um blob
  */
-export async function generateDownloadUrl(blobName: string, expiresInMinutes: number = 60): Promise<string | null> {
+export async function generateDownloadUrl(blobName: string): Promise<string | null> {
+  // expiresInMinutes removido pois não é utilizado
   try {
     const { containerClient } = getStorageClients();
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -248,7 +249,8 @@ export async function getBlobMetadata(blobName: string) {
 export async function ensureContainerExists(): Promise<boolean> {
   try {
     const { containerClient } = getStorageClients();
-    const createResponse = await containerClient.createIfNotExists();
+    // Variável não utilizada
+    await containerClient.createIfNotExists();
     
     return true;
   } catch (error) {

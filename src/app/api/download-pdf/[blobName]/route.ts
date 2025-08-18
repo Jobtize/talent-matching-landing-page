@@ -59,7 +59,7 @@ export async function GET(
     }
 
     // Gerar URL de download
-    const downloadUrl = await generateDownloadUrl(blobName, 60); // 60 minutos
+    const downloadUrl = await generateDownloadUrl(blobName); // Parâmetro de tempo removido
 
     if (!downloadUrl) {
       return NextResponse.json(
