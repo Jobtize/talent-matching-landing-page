@@ -5,11 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 
 // Tipo para a função gtag global
-declare global {
-  interface Window {
-    gtag: (...args: unknown[]) => void
-  }
-}
+// Nota: A definição completa está em useGoogleAnalytics.ts
 
 // Função para enviar pageviews
 export const pageview = (GA_MEASUREMENT_ID: string, url: string) => {
