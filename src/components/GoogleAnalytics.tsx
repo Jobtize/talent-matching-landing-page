@@ -2,7 +2,7 @@
 
 import Script from 'next/script'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 
 // Tipo para a função gtag global
 // Nota: A definição completa está em useGoogleAnalytics.ts
@@ -18,7 +18,8 @@ type GoogleAnalyticsProps = {
   GA_MEASUREMENT_ID: string
 }
 
-export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: GoogleAnalyticsProps) {
+// Componente que usa useSearchParams dentro de um Suspense
+function AnalyticsTracker({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_ID: string }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -29,6 +30,10 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: GoogleAnalyticsPr
     pageview(GA_MEASUREMENT_ID, url)
   }, [pathname, searchParams, GA_MEASUREMENT_ID])
 
+  return null
+}
+
+export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: GoogleAnalyticsProps) {
   return (
     <>
       <Script
@@ -49,6 +54,9 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: GoogleAnalyticsPr
           `,
         }}
       />
+      <Suspense fallback={null}>
+        <AnalyticsTracker GA_MEASUREMENT_ID={GA_MEASUREMENT_ID} />
+      </Suspense>
     </>
   )
 }
