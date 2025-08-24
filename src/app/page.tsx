@@ -12,6 +12,8 @@ import { JobtizeLogo } from '@/components/ui/jobtize-logo'
 import PdfUpload, { ValidatedFile, PdfUploadRef } from '@/components/ui/pdf-upload'
 import { ThankYouModal } from '@/components/ui/thank-you-modal'
 import ClientOnly from '@/components/ClientOnly'
+import { useRouter } from 'next/navigation'
+import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics'
 import { 
   Briefcase, 
   TrendingUp, 
@@ -24,7 +26,8 @@ import {
   Loader2,
   AlertCircle,
   Download,
-  FileText
+  FileText,
+  Linkedin
 } from 'lucide-react'
 
 interface FormData {
@@ -73,6 +76,9 @@ interface PendingFormData {
 }
 
 export default function JobtizeLanding() {
+  const router = useRouter()
+  const { sendEvent } = useGoogleAnalytics()
+  
   const [formData, setFormData] = useState<FormData>({
     nome: '',
     email: '',
@@ -500,7 +506,27 @@ export default function JobtizeLanding() {
                 Pare de procurar emprego. Nossa plataforma inteligente conecta você às melhores 
                 oportunidades baseadas no seu perfil profissional.
               </p>
-
+              
+              <Button
+                onClick={() => {
+                  // Tracking do clique em login com LinkedIn
+                  track('linkedin_login_click', {
+                    source: 'landing_page'
+                  })
+                  
+                  // Tracking do Google Analytics
+                  sendEvent('linkedin_login_click', {
+                    source: 'landing_page'
+                  })
+                  
+                  // Redirecionar para a autenticação do LinkedIn
+                  router.push('/api/auth/linkedin')
+                }}
+                className="flex items-center space-x-2 bg-[#0077B5] hover:bg-[#006097] text-white px-6 py-3 rounded-md font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+              >
+                <Linkedin className="w-5 h-5" />
+                <span>Entrar com LinkedIn</span>
+              </Button>
             </div>
 
             {/* Formulário */}
