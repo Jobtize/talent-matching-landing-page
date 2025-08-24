@@ -167,47 +167,71 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
     }, [value])
 
     // Gerenciar mapa: inicialização e atualizações de localização
-    React.useEffect(() => {
-      // Verificar se o mapa deve ser inicializado
-      if (showMap && mapRef.current && mapIntegration.isLoaded) {
-        // Determinar qual localização usar
-        const locationToUse = selectedLocation || SAO_PAULO_CENTER
-        const markerTitle = selectedLocation ? 'Localização selecionada' : 'São Paulo - SP, Brasil'
+    // Efeito para inicializar o mapa quando showMap muda para true
+  React.useEffect(() => {
+    // Só executar quando o mapa deve ser mostrado e temos os recursos necessários
+    if (!showMap || !mapRef.current || !mapIntegration.isLoaded) {
+      return;
+    }
+    
+    // Flag para controlar se o efeito ainda está ativo
+    let isMounted = true;
+    
+    // Função para configurar o mapa
+    const setupMap = async () => {
+      try {
+        // Determinar localização a ser usada
+        const locationToUse = selectedLocation || SAO_PAULO_CENTER;
+        const markerTitle = selectedLocation ? 'Localização selecionada' : 'São Paulo - SP, Brasil';
         
-        // Usar uma variável para controlar se o efeito ainda está ativo
-        let isEffectActive = true
+        // Limpar qualquer mapa existente
+        mapIntegration.clearMap();
         
-        // Função assíncrona para inicializar o mapa
-        const setupMap = async () => {
-          try {
-            // Limpar mapa anterior
-            mapIntegration.clearMap()
-            
-            // Inicializar novo mapa
-            const mapInstanceDirect = await mapIntegration.initializeMap(mapRef.current, locationToUse)
-            
-            // Verificar se o efeito ainda está ativo antes de continuar
-            if (!isEffectActive) return
-            
-            // Adicionar marcador se o mapa foi inicializado com sucesso
-            if (mapInstanceDirect) {
-              mapIntegration.addMarker(locationToUse, markerTitle)
-              setLastMapLocation(locationToUse)
-            }
-          } catch (error) {
-            console.error('Erro ao inicializar mapa:', error)
-          }
+        // Inicializar o mapa com a localização
+        const mapInstance = await mapIntegration.initializeMap(mapRef.current, locationToUse);
+        
+        // Verificar se o componente ainda está montado
+        if (!isMounted) return;
+        
+        // Se o mapa foi inicializado com sucesso, adicionar marcador
+        if (mapInstance) {
+          mapIntegration.addMarker(locationToUse, markerTitle);
+          setLastMapLocation(locationToUse);
         }
-        
-        // Iniciar configuração do mapa
-        setupMap()
-        
-        // Função de limpeza para evitar atualizações de estado em componentes desmontados
-        return () => {
-          isEffectActive = false
+      } catch (error) {
+        if (isMounted) {
+          console.error('Erro ao inicializar mapa:', error);
         }
       }
-    }, [showMap, mapIntegration, selectedLocation])
+    };
+    
+    // Iniciar configuração do mapa
+    setupMap();
+    
+    // Função de limpeza
+    return () => {
+      isMounted = false;
+      // Não limpar o mapa aqui, apenas marcar o efeito como inativo
+    };
+  }, [showMap, mapIntegration.isLoaded]);
+  
+  // Efeito separado para atualizar o mapa quando a localização muda
+  React.useEffect(() => {
+    // Só executar quando o mapa está visível e temos uma localização selecionada
+    if (!showMap || !mapIntegration.mapInstance || !selectedLocation) {
+      return;
+    }
+    
+    // Atualizar o centro do mapa e o marcador
+    mapIntegration.centerMap(selectedLocation);
+    
+    const markerTitle = 'Localização selecionada';
+    mapIntegration.clearMarker();
+    mapIntegration.addMarker(selectedLocation, markerTitle);
+    
+    // Atualizar última localização
+    setLastMapLocation(selectedLocation);
+  }, [selectedLocation, mapIntegration, showMap]);
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value

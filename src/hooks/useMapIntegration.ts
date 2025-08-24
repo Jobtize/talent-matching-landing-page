@@ -171,90 +171,61 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
     element: HTMLElement, 
     center: { lat: number; lng: number }
   ): Promise<google.maps.Map | null> => {
-    console.log('🗺️ [HOOK] initializeMap chamado')
-    console.log('🗺️ [HOOK] isLoaded:', isLoaded)
-    console.log('🗺️ [HOOK] element:', element)
-    console.log('🗺️ [HOOK] center:', center)
-    
+    // Verificar se o Google Maps já está carregado
     if (!isLoaded) {
-      console.log('🗺️ [HOOK] Google Maps não carregado, carregando...')
       await loadGoogleMaps();
     }
 
     if (!window.google || !window.google.maps) {
-      console.error('🗺️ [HOOK] Google Maps não está disponível após carregamento')
       throw new Error('Google Maps não está disponível');
     }
 
-    console.log('🗺️ [HOOK] Iniciando criação do mapa...')
     setIsInitializing(true);
     setError(null);
 
     try {
+      // Limpar qualquer instância anterior
+      if (mapRef.current) {
+        mapRef.current = null;
+        setMapInstance(null);
+      }
+
+      // Configurar opções do mapa
       const mapOptions: google.maps.MapOptions = {
         ...defaultMapOptions,
         center,
+        zoom: 15
       };
-
-      console.log('🗺️ [HOOK] Criando instância do Google Maps...')
-      console.log('🗺️ [HOOK] mapOptions:', mapOptions)
-      console.log('🗺️ [HOOK] center recebido:', center)
-      console.log('🗺️ [HOOK] defaultMapOptions:', defaultMapOptions)
       
+      // Criar nova instância do mapa
       const map = new google.maps.Map(element, mapOptions);
-      console.log('🗺️ [HOOK] Mapa criado com sucesso:', map)
       
-      // Aguardar o mapa estar completamente carregado
-      console.log('🗺️ [HOOK] Aguardando mapa estar pronto...')
-      
-      // Usar Promise para aguardar o evento 'idle' (mapa completamente carregado)
+      // Aguardar o mapa estar pronto usando o evento 'idle'
       await new Promise<void>((resolve) => {
         const idleListener = map.addListener('idle', () => {
-          console.log('🗺️ [HOOK] Mapa está idle (pronto)')
           google.maps.event.removeListener(idleListener);
           resolve();
         });
         
-        // Timeout de segurança
+        // Timeout de segurança (3 segundos)
         setTimeout(() => {
-          console.log('🗺️ [HOOK] Timeout - forçando resolução')
           google.maps.event.removeListener(idleListener);
           resolve();
         }, 3000);
       });
       
-      // Forçar centralização e zoom após mapa estar pronto
-      console.log('🗺️ [HOOK] Forçando centralização...')
+      // Garantir que o centro e zoom estão corretos
       map.setCenter(center);
       map.setZoom(15);
-      console.log('🗺️ [HOOK] Centro forçado para:', center)
-      console.log('🗺️ [HOOK] Zoom forçado para: 15')
       
-      // Aguardar um pouco mais para garantir que tudo foi aplicado
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Definir mapInstance de forma síncrona
-      
-      // Atualizar ref primeiro (síncrono) para evitar condição de corrida
+      // Atualizar referências
       mapRef.current = map;
-      // Depois atualizar state (assíncrono) para componentes que dependem dele
       setMapInstance(map);
-      console.log('🗺️ [HOOK] setMapInstance chamado')
-      
-      // Forçar re-render imediato
       setIsInitializing(false);
       
-      // Aguardar um ciclo de render para garantir que o estado foi atualizado
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('🗺️ [HOOK] initializeMap concluído com sucesso')
-      console.log('🗺️ [HOOK] Verificando estado final - mapInstance:', !!map)
-      
-      // Retornar a instância do mapa diretamente
       return map;
-    } catch {
-      const errorMsg = 'Erro ao inicializar o mapa';
-      setError(errorMsg);
+    } catch (error) {
+      setError('Erro ao inicializar o mapa');
       setIsInitializing(false);
       return null;
     }
@@ -299,14 +270,23 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
   }, []);
 
   const clearMap = useCallback(() => {
+    // Limpar marcador
     if (currentMarker) {
       currentMarker.setMap(null);
       setCurrentMarker(null);
     }
     
-    // Limpar tanto ref quanto state
-    mapRef.current = null;
-    setMapInstance(null);
+    // Limpar instância do mapa
+    if (mapRef.current) {
+      // Remover todos os listeners para evitar memory leaks
+      if (window.google && window.google.maps) {
+        google.maps.event.clearInstanceListeners(mapRef.current);
+      }
+      
+      // Limpar referências
+      mapRef.current = null;
+      setMapInstance(null);
+    }
   }, [currentMarker]);
 
   // Auto-carregar Google Maps se a API key estiver disponível
