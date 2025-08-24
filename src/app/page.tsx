@@ -639,7 +639,7 @@ export default function JobtizeLanding() {
                 {/* Campo de Currículo */}
                 {/* Upload de PDF */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-500">
                     📄 Currículo (PDF) - Opcional
                   </label>
                   <PdfUpload
