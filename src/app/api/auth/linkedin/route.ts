@@ -11,9 +11,17 @@ const LINKEDIN_SCOPE = 'openid profile email'
 // Endpoint de autorização do LinkedIn
 const LINKEDIN_AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization'
 
+// Função simples para debug
+function logDebug(message: string, data?: any) {
+  console.log(`[LinkedIn Auth Debug] ${message}`, data || '')
+}
+
 export async function GET() {
+  logDebug('Iniciando autenticação LinkedIn')
+  
   // Gerar um estado aleatório para segurança
   const state = Math.random().toString(36).substring(2, 15)
+  logDebug('Estado gerado', { state })
   
   // Construir URL de autorização
   const authUrl = new URL(LINKEDIN_AUTH_URL)
@@ -23,11 +31,17 @@ export async function GET() {
   authUrl.searchParams.append('state', state)
   authUrl.searchParams.append('scope', LINKEDIN_SCOPE)
   
+  logDebug('URL de autorização construída', { 
+    url: authUrl.toString(),
+    redirect_uri: LINKEDIN_REDIRECT_URI
+  })
+  
   // Armazenar o estado em um cookie para validação posterior
   const headers = new Headers()
   headers.append('Set-Cookie', `linkedin_oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600`)
   
   // Redirecionar para a página de autorização do LinkedIn
+  logDebug('Redirecionando para LinkedIn')
   return NextResponse.redirect(authUrl.toString(), {
     headers
   })

@@ -12,7 +12,13 @@ const LINKEDIN_REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL
 const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken'
 const LINKEDIN_USER_INFO_URL = 'https://api.linkedin.com/v2/userinfo'
 
+// Função simples para debug
+function logDebug(message: string, data?: any) {
+  console.log(`[LinkedIn Callback Debug] ${message}`, data || '')
+}
+
 export async function GET(request: NextRequest) {
+  logDebug('Callback iniciado', { url: request.url })
   // Obter o código de autorização e o estado da URL
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
@@ -23,16 +29,26 @@ export async function GET(request: NextRequest) {
   const storedState = cookies.get('linkedin_oauth_state')?.value
   
   // Verificar se o código e o estado são válidos
+  logDebug('Verificando código e estado', { code: !!code, state, storedState })
+  
   if (!code) {
+    logDebug('Código ausente, redirecionando para erro')
     return NextResponse.redirect(new URL('/?error=missing_code', request.url))
   }
   
   if (!state || state !== storedState) {
+    logDebug('Estado inválido, redirecionando para erro', { state, storedState })
     return NextResponse.redirect(new URL('/?error=invalid_state', request.url))
   }
   
+  logDebug('Código e estado válidos, prosseguindo')
+  
   try {
     // Trocar o código de autorização por um token de acesso
+    logDebug('Iniciando troca de código por token', { 
+      redirect_uri: LINKEDIN_REDIRECT_URI 
+    })
+    
     const tokenResponse = await fetch(LINKEDIN_TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -45,6 +61,11 @@ export async function GET(request: NextRequest) {
         client_secret: LINKEDIN_CLIENT_SECRET,
         redirect_uri: LINKEDIN_REDIRECT_URI,
       }),
+    })
+    
+    logDebug('Resposta da troca de token recebida', { 
+      status: tokenResponse.status,
+      ok: tokenResponse.ok 
     })
     
     if (!tokenResponse.ok) {
@@ -138,6 +159,52 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Erro no processo de autenticação do LinkedIn:', error)
-    return NextResponse.redirect(new URL('/?error=authentication_failed', request.url))
+    logDebug('Erro capturado no try/catch', { error: error instanceof Error ? error.message : String(error) })
+    
+    // Responder com uma página HTML simples em vez de redirecionar
+    return new NextResponse(
+      `<!DOCTYPE html>
+      <html>
+        <head>
+          <title>Erro de Autenticação</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+            .error-container { max-width: 600px; margin: 0 auto; }
+            .error-title { color: #e74c3c; }
+            .error-message { margin: 20px 0; }
+            .home-link { display: inline-block; margin-top: 20px; padding: 10px 20px; 
+                        background-color: #3498db; color: white; text-decoration: none; 
+                        border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <div class="error-container">
+            <h1 class="error-title">Erro de Autenticação</h1>
+            <p class="error-message">
+              Ocorreu um erro durante o processo de autenticação com o LinkedIn.
+              Por favor, tente novamente mais tarde.
+            </p>
+            <a href="/" class="home-link">Voltar para a página inicial</a>
+          </div>
+          <script>
+            // Registrar erro no console do navegador
+            console.error("Erro de autenticação do LinkedIn");
+            
+            // Redirecionar para a página inicial após 5 segundos
+            setTimeout(() => {
+              window.location.href = "/";
+            }, 5000);
+          </script>
+        </body>
+      </html>`,
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+        },
+      }
+    )
   }
 }
