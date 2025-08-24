@@ -319,68 +319,68 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
               includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1', 'country'],
               maxResultCount: 10,
               fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
+            };
+
+            const result = await (Place as unknown as { 
+              searchNearby: (request: unknown) => Promise<SearchNearbyResult> 
+            }).searchNearby(request)
+
+            let address = 'Minha localização atual'
+            const places = result?.places
+
+            if (places && Array.isArray(places) && places.length > 0) {
+              // Procurar por diferentes tipos de localização
+              const locality = places.find((place: GooglePlaceResult) => 
+                place.types?.includes('locality')
+              )
+              const adminLevel1 = places.find((place: GooglePlaceResult) => 
+                place.types?.includes('administrative_area_level_1')
+              )
+              const adminLevel2 = places.find((place: GooglePlaceResult) => 
+                place.types?.includes('administrative_area_level_2')
+              )
+              const country = places.find((place: GooglePlaceResult) => 
+                place.types?.includes('country')
+              )
+              
+              // Montar endereço no formato "Cidade, Estado, País"
+              const addressParts = []
+              
+              if (locality) {
+                addressParts.push(locality.displayName)
+              } else if (adminLevel2) {
+                addressParts.push(adminLevel2.displayName)
               }
-
-              const result = await (Place as unknown as { 
-                searchNearby: (request: unknown) => Promise<SearchNearbyResult> 
-              }).searchNearby(request)
-
-              let address = 'Minha localização atual'
-              const places = result?.places
-
-              if (places && Array.isArray(places) && places.length > 0) {
-                // Procurar por diferentes tipos de localização
-                const locality = places.find((place: GooglePlaceResult) => 
-                  place.types?.includes('locality')
-                )
-                const adminLevel1 = places.find((place: GooglePlaceResult) => 
-                  place.types?.includes('administrative_area_level_1')
-                )
-                const adminLevel2 = places.find((place: GooglePlaceResult) => 
-                  place.types?.includes('administrative_area_level_2')
-                )
-                const country = places.find((place: GooglePlaceResult) => 
-                  place.types?.includes('country')
-                )
-                
-                // Montar endereço no formato "Cidade, Estado, País"
-                const addressParts = []
-                
-                if (locality) {
-                  addressParts.push(locality.displayName)
-                } else if (adminLevel2) {
-                  addressParts.push(adminLevel2.displayName)
-                }
-                
-                if (adminLevel1) {
-                  addressParts.push(adminLevel1.displayName)
-                }
-                
-                if (country) {
-                  addressParts.push(country.displayName)
-                }
-                
-                if (addressParts.length > 0) {
-                  address = addressParts.join(', ')
-                } else {
-                  // Usar o primeiro resultado disponível como fallback
-                  const firstPlace = places[0] as { formattedAddress?: string; displayName?: string }
-                  address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
-                }
+              
+              if (adminLevel1) {
+                addressParts.push(adminLevel1.displayName)
               }
-
-              setInputValue(address)
-              onChange(address)
-            } catch (error) {
-              console.error('Error with Places API searchNearby:', error)
-              const address = 'Minha localização atual'
-              setInputValue(address)
-              onChange(address)
+              
+              if (country) {
+                addressParts.push(country.displayName)
+              }
+              
+              if (addressParts.length > 0) {
+                address = addressParts.join(', ')
+              } else {
+                // Usar o primeiro resultado disponível como fallback
+                const firstPlace = places[0] as { formattedAddress?: string; displayName?: string }
+                address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
+              }
             }
-          } else {
+
+            setInputValue(address)
+            onChange(address)
+          } catch (error) {
+            console.error('Error with Places API searchNearby:', error)
             const address = 'Minha localização atual'
             setInputValue(address)
             onChange(address)
+          }
+        } else {
+          const address = 'Minha localização atual'
+          setInputValue(address)
+          onChange(address)
           }
           
           // Abrir mapa automaticamente se estiver em modo automático
