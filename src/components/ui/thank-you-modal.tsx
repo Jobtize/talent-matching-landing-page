@@ -5,6 +5,7 @@ import { track } from '@vercel/analytics'
 import { X, CheckCircle, MessageCircle, Linkedin } from 'lucide-react'
 import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics'
 import { Button } from '@/components/ui/button'
+import { GoogleButton } from '@/components/ui/google-button'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { FormStorageData } from '@/hooks/useFormStorage'
@@ -138,6 +139,9 @@ export function ThankYouModal({
                 <Linkedin className="w-5 h-5 mr-2" />
                 Continuar com LinkedIn
               </Button>
+              
+              {/* Botão de Login com Google */}
+              <GoogleButton className="animate-in slide-in-from-bottom-4 duration-500 delay-550" />
             </div>
 
             {/* Opção de WhatsApp */}
