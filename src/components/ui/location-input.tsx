@@ -84,15 +84,27 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
 
     // Converter sugestões para o formato esperado pelo SuggestionsList
     const suggestionData: SuggestionData[] = React.useMemo(() => 
-      locationSearch.suggestions.map(suggestion => ({
-        id: suggestion.place_id,
-        mainText: suggestion.structured_formatting.main_text,
-        secondaryText: suggestion.structured_formatting.secondary_text
-      })), [locationSearch.suggestions]
+      locationSearch.suggestions.map(suggestion => {
+        // Corrigir problema de duplicação de nomes (ex: "Leblon, Leblon, Rio de Janeiro")
+        let mainText = suggestion.structured_formatting.main_text;
+        let secondaryText = suggestion.structured_formatting.secondary_text;
+        
+        // Se o texto principal aparece no início do texto secundário, remover a duplicação
+        if (secondaryText.startsWith(mainText + ', ')) {
+          secondaryText = secondaryText.substring(mainText.length + 2); // +2 para remover a vírgula e o espaço
+        }
+        
+        return {
+          id: suggestion.place_id,
+          mainText: mainText,
+          secondaryText: secondaryText
+        };
+      }), [locationSearch.suggestions]
     )
 
     // Função para lidar com seleção de sugestão
     const handleSuggestionSelect = React.useCallback(async (suggestion: SuggestionData) => {
+      // Formatar o texto selecionado corretamente
       const selectedText = suggestion.mainText + (suggestion.secondaryText ? `, ${suggestion.secondaryText}` : '')
       setInputValue(selectedText)
       setShowSuggestions(false)
