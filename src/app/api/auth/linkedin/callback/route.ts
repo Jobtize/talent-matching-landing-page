@@ -118,6 +118,15 @@ export async function GET(request: NextRequest) {
     const baseUrl = request.nextUrl.origin
     
     // Criar HTML para definir localStorage e redirecionar
+    const userData = {
+      id: userResult.user.id,
+      name: userResult.user.name,
+      email: userResult.user.email,
+      profilePicture: userResult.user.profilePicture,
+    };
+    
+    const userDataJson = JSON.stringify(userData).replace(/'/g, "\\'").replace(/"/g, '\\"');
+    
     const html = `
       <!DOCTYPE html>
       <html>
@@ -125,26 +134,58 @@ export async function GET(request: NextRequest) {
           <title>Redirecionando...</title>
           <meta charset="utf-8">
           <script>
-            // Armazenar token e dados do usuário no localStorage
-            try {
-              localStorage.setItem('auth_token', '${userResult.token}');
-              localStorage.setItem('user_data', '${JSON.stringify({
-                id: userResult.user.id,
-                name: userResult.user.name,
-                email: userResult.user.email,
-                profilePicture: userResult.user.profilePicture,
-              }).replace(/'/g, "\\'")}');
-              console.log('Dados salvos no localStorage');
-            } catch (e) {
-              console.error('Erro ao salvar no localStorage:', e);
+            // Função para verificar se o localStorage está disponível
+            function isLocalStorageAvailable() {
+              try {
+                const test = 'test';
+                localStorage.setItem(test, test);
+                localStorage.removeItem(test);
+                return true;
+              } catch(e) {
+                return false;
+              }
             }
             
-            // Redirecionar para a página de perfil
-            window.location.href = '${baseUrl}/profile';
+            // Armazenar token e dados do usuário no localStorage
+            function saveAuthData() {
+              try {
+                if (isLocalStorageAvailable()) {
+                  localStorage.setItem('auth_token', '${userResult.token}');
+                  localStorage.setItem('user_data', "${userDataJson}");
+                  console.log('Dados salvos no localStorage com sucesso');
+                  return true;
+                } else {
+                  console.error('localStorage não está disponível');
+                  return false;
+                }
+              } catch (e) {
+                console.error('Erro ao salvar no localStorage:', e);
+                return false;
+              }
+            }
+            
+            // Tentar salvar os dados
+            const saved = saveAuthData();
+            console.log('Status do salvamento:', saved ? 'sucesso' : 'falha');
+            
+            // Redirecionar para a página de perfil após um pequeno delay
+            setTimeout(function() {
+              window.location.href = '${baseUrl}/profile';
+            }, 500);
           </script>
         </head>
         <body>
-          <p>Redirecionando para a página de perfil...</p>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif;">
+            <h2>Login realizado com sucesso!</h2>
+            <p>Redirecionando para a página de perfil...</p>
+            <div style="margin-top: 20px; width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <style>
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            </style>
+          </div>
         </body>
       </html>
     `;

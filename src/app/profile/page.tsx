@@ -37,6 +37,7 @@ interface ProfileData {
 }
 
 export default function ProfilePage() {
+  const [clientReady, setClientReady] = useState(false)
   const { user, isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
   const [profileCompletion, setProfileCompletion] = useState(75)
@@ -58,12 +59,30 @@ export default function ProfilePage() {
     languages: []
   })
 
+  // Verificar se estamos no cliente
+  useEffect(() => {
+    setClientReady(true)
+    console.log('Página de perfil montada no cliente')
+    
+    // Verificar dados de autenticação no localStorage
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('auth_token')
+      const userDataStr = localStorage.getItem('user_data')
+      
+      console.log('Dados encontrados no localStorage:', {
+        token: storedToken ? 'presente' : 'ausente',
+        userData: userDataStr ? 'presente' : 'ausente'
+      })
+    }
+  }, [])
+
   // Redirecionar se não estiver autenticado
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (clientReady && !isLoading && !isAuthenticated) {
+      console.log('Não autenticado, redirecionando para a página inicial')
       router.push('/')
     }
-  }, [isLoading, isAuthenticated, router])
+  }, [clientReady, isLoading, isAuthenticated, router])
 
   // Preencher dados do perfil com informações do LinkedIn quando disponíveis
   useEffect(() => {
@@ -84,10 +103,24 @@ export default function ProfilePage() {
   }
 
   // Renderizar carregamento
-  if (isLoading) {
+  if (!clientReady || isLoading) {
+    console.log('Renderizando estado de carregamento', { clientReady, isLoading })
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-600">Carregando perfil...</p>
+      </div>
+    )
+  }
+  
+  // Verificar se o usuário está autenticado
+  if (!isAuthenticated || !user) {
+    console.log('Usuário não autenticado, redirecionando...')
+    // Redirecionar para a página inicial
+    router.push('/')
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <p className="text-gray-600">Redirecionando para a página inicial...</p>
       </div>
     )
   }
