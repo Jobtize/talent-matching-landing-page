@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 // Configurações do LinkedIn OAuth
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || '77isdg42ka2p5g'
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || 'WPL_AP1.ODmhmSDjd6A86EXm.1p3AsQ=='
-const LINKEDIN_REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI || 'http://localhost:3000/api/auth/linkedin/callback'
+const LINKEDIN_REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI || 'http://127.0.0.1:8000/oidc/callback/'
 
 // Endpoint de token do LinkedIn
 const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken'
@@ -121,4 +121,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/?error=authentication_failed', request.url))
   }
 }
-

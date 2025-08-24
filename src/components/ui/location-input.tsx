@@ -168,113 +168,46 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
 
     // Gerenciar mapa: inicialização e atualizações de localização
     React.useEffect(() => {
-      console.log('🔄 useEffect executado')
-      console.log('🔄 showMap:', showMap)
-      console.log('🔄 mapRef.current:', !!mapRef.current)
-      console.log('🔄 mapIntegration.isLoaded:', mapIntegration.isLoaded)
-      
-      const initializeMap = async () => {
-        console.log('🔄 initializeMap função chamada')
+      // Verificar se o mapa deve ser inicializado
+      if (showMap && mapRef.current && mapIntegration.isLoaded) {
+        // Determinar qual localização usar
+        const locationToUse = selectedLocation || SAO_PAULO_CENTER
+        const markerTitle = selectedLocation ? 'Localização selecionada' : 'São Paulo - SP, Brasil'
         
-        if (showMap && mapRef.current && mapIntegration.isLoaded) {
-          console.log('🗺️ === INICIANDO MAPA ===')
-          console.log('🗺️ MapRef atual:', mapRef.current)
-          console.log('🗺️ MapIntegration isLoaded:', mapIntegration.isLoaded)
-          console.log('🗺️ MapInstance existe:', !!mapIntegration.mapInstance)
-          console.log('🗺️ SelectedLocation:', selectedLocation)
-          console.log('🗺️ LastMapLocation:', lastMapLocation)
-          
+        // Usar uma variável para controlar se o efeito ainda está ativo
+        let isEffectActive = true
+        
+        // Função assíncrona para inicializar o mapa
+        const setupMap = async () => {
           try {
-            console.log('🔄 Entrando no try block')
-            
-            // SEMPRE recriar o mapa quando o elemento DOM for recriado
-            console.log('🗺️ Limpando instância anterior e criando nova...')
+            // Limpar mapa anterior
             mapIntegration.clearMap()
-            console.log('🔄 clearMap executado')
             
-            // Determinar qual localização usar
-            console.log('🔄 Determinando localização...')
-            const locationToUse = selectedLocation || SAO_PAULO_CENTER
-            const markerTitle = selectedLocation ? 'Localização selecionada' : 'São Paulo - SP, Brasil'
-            console.log('🔄 Localização determinada')
+            // Inicializar novo mapa
+            const mapInstanceDirect = await mapIntegration.initializeMap(mapRef.current, locationToUse)
             
-            console.log('🗺️ Localização escolhida:', locationToUse)
-            console.log('🗺️ Título do marcador:', markerTitle)
+            // Verificar se o efeito ainda está ativo antes de continuar
+            if (!isEffectActive) return
             
-            // Inicializar mapa
-            console.log('🗺️ Chamando mapIntegration.initializeMap...')
-            console.log('🗺️ mapRef.current:', mapRef.current)
-            console.log('🗺️ locationToUse:', locationToUse)
-            console.log('🗺️ mapIntegration:', mapIntegration)
-            console.log('🗺️ mapIntegration.initializeMap:', typeof mapIntegration.initializeMap)
-            
-            try {
-              const mapInstanceDirect = await mapIntegration.initializeMap(mapRef.current, locationToUse)
-              console.log('🗺️ initializeMap retornou com sucesso')
-              console.log('🗺️ mapInstanceDirect:', !!mapInstanceDirect)
-              
-              // Se temos a instância direta, usar ela para adicionar o marcador
-              if (mapInstanceDirect) {
-                console.log('🗺️ Usando instância direta para adicionar marcador')
-                mapIntegration.addMarker(locationToUse, markerTitle)
-                console.log('🗺️ Marcador adicionado com instância direta!')
-                return // Sair da função, não precisamos do retry loop
-              }
-            } catch (error) {
-              console.error('🗺️ ERRO em initializeMap:', error)
-              throw error
-            }
-            
-            // Atualizar última localização
-            setLastMapLocation(locationToUse)
-            
-            // Aguardar mapInstance ser atualizado no estado e adicionar marcador
-            let retryCount = 0
-            const maxRetries = 50 // Máximo 5 segundos (50 * 100ms)
-            
-            const waitForMapAndAddMarker = () => {
-              console.log('📍 === VERIFICANDO MAPA PARA ADICIONAR MARCADOR ===')
-              console.log('📍 Tentativa:', retryCount + 1, '/', maxRetries)
-              console.log('📍 Posição:', locationToUse)
-              console.log('📍 Título:', markerTitle)
-              console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
-              console.log('📍 Google Maps disponível:', !!window.google)
-              
-              if (!mapIntegration.mapInstance) {
-                retryCount++
-                if (retryCount >= maxRetries) {
-                  console.error('❌ Timeout: MapInstance não foi criado após', maxRetries, 'tentativas')
-                  console.error('❌ Possível problema no hook useMapIntegration')
-                  return
-                }
-                console.log('⏳ MapInstance ainda é null, aguardando... (tentativa', retryCount, '/', maxRetries, ')')
-                setTimeout(waitForMapAndAddMarker, 100)
-                return
-              }
-              
-              if (!window.google) {
-                console.error('❌ Google Maps não está disponível!')
-                return
-              }
-              
-              console.log('📍 === ADICIONANDO MARCADOR ===')
-              console.log('📍 MapInstance encontrado após', retryCount, 'tentativas!')
+            // Adicionar marcador se o mapa foi inicializado com sucesso
+            if (mapInstanceDirect) {
               mapIntegration.addMarker(locationToUse, markerTitle)
-              console.log('📍 addMarker chamado com sucesso!')
+              setLastMapLocation(locationToUse)
             }
-            
-            // Iniciar verificação após um pequeno delay
-            setTimeout(waitForMapAndAddMarker, 200)
-            
-            console.log('🗺️ Mapa inicializado com sucesso!')
           } catch (error) {
-            console.error('❌ Error initializing map:', error)
+            console.error('Erro ao inicializar mapa:', error)
           }
         }
+        
+        // Iniciar configuração do mapa
+        setupMap()
+        
+        // Função de limpeza para evitar atualizações de estado em componentes desmontados
+        return () => {
+          isEffectActive = false
+        }
       }
-
-      initializeMap()
-    }, [showMap, mapIntegration.isLoaded, selectedLocation, lastMapLocation, mapIntegration]) // Incluir todas as dependências
+    }, [showMap, mapIntegration, selectedLocation])
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
