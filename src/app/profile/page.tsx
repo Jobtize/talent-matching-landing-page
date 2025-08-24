@@ -80,9 +80,11 @@ export default function ProfilePage() {
   useEffect(() => {
     if (clientReady && !isLoading && !isAuthenticated) {
       console.log('Não autenticado, redirecionando para a página inicial')
-      router.push('/')
+      if (typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
     }
-  }, [clientReady, isLoading, isAuthenticated, router])
+  }, [clientReady, isLoading, isAuthenticated])
 
   // Preencher dados do perfil com informações do LinkedIn quando disponíveis
   useEffect(() => {
@@ -117,7 +119,9 @@ export default function ProfilePage() {
   if (!isAuthenticated || !user) {
     console.log('Usuário não autenticado, redirecionando...')
     // Redirecionar para a página inicial
-    router.push('/')
+    if (typeof window !== 'undefined') {
+      window.location.href = '/'
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <p className="text-gray-600">Redirecionando para a página inicial...</p>

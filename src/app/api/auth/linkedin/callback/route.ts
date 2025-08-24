@@ -168,10 +168,15 @@ export async function GET(request: NextRequest) {
             const saved = saveAuthData();
             console.log('Status do salvamento:', saved ? 'sucesso' : 'falha');
             
+            // Definir cookies para autenticação no lado do servidor
+            document.cookie = "auth_token=${userResult.token}; path=/; max-age=2592000; SameSite=Lax";
+            document.cookie = "user_data=${encodeURIComponent(userDataJson)}; path=/; max-age=2592000; SameSite=Lax";
+            console.log('Cookies definidos para autenticação no servidor');
+            
             // Redirecionar para a página de perfil após um pequeno delay
             setTimeout(function() {
               window.location.href = '${baseUrl}/profile';
-            }, 500);
+            }, 1000);
           </script>
         </head>
         <body>
