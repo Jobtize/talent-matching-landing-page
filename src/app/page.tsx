@@ -478,7 +478,7 @@ export default function JobtizeLanding() {
               <JobtizeLogo width={32} height={32} />
               <span className="text-xl font-bold text-gray-900">Jobtize</span>
             </div>
-            <nav className="hidden md:flex space-x-8">
+            <nav className="hidden md:flex items-center space-x-8">
               <a href="#como-funciona" className="text-gray-600 hover:text-blue-600 transition-colors">
                 Como Funciona
               </a>
@@ -488,6 +488,23 @@ export default function JobtizeLanding() {
               <a href="#depoimentos" className="text-gray-600 hover:text-blue-600 transition-colors">
                 Depoimentos
               </a>
+              <Button
+                onClick={() => {
+                  track('linkedin_login_click', {
+                    source: 'landing_page'
+                  })
+                  
+                  sendEvent('linkedin_login_click', {
+                    source: 'landing_page'
+                  })
+                  
+                  router.push('/api/auth/linkedin')
+                }}
+                className="flex items-center gap-2 bg-[#0077B5] hover:bg-[#006097] text-white px-4 py-2 rounded-md font-medium text-sm"
+              >
+                <Linkedin className="w-4 h-4" />
+                <span>Entrar com LinkedIn</span>
+              </Button>
             </nav>
           </div>
         </div>
@@ -507,26 +524,7 @@ export default function JobtizeLanding() {
                 oportunidades baseadas no seu perfil profissional.
               </p>
               
-              <Button
-                onClick={() => {
-                  // Tracking do clique em login com LinkedIn
-                  track('linkedin_login_click', {
-                    source: 'landing_page'
-                  })
-                  
-                  // Tracking do Google Analytics
-                  sendEvent('linkedin_login_click', {
-                    source: 'landing_page'
-                  })
-                  
-                  // Redirecionar para a autenticação do LinkedIn
-                  router.push('/api/auth/linkedin')
-                }}
-                className="flex items-center gap-2 bg-[#0077B5] hover:bg-[#006097] text-white px-4 py-2 rounded-md font-medium text-sm"
-              >
-                <Linkedin className="w-4 h-4" />
-                <span>Entrar com LinkedIn</span>
-              </Button>
+
             </div>
 
             {/* Formulário */}
