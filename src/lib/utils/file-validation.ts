@@ -94,7 +94,8 @@ export async function validatePdfFile(file: File): Promise<FileValidationResult>
         error: 'Arquivo não é um PDF válido. Verifique se o arquivo não foi renomeado.'
       };
     }
-  } catch (error) {
+  } catch {
+    // Erro capturado mas não utilizado
     return {
       isValid: false,
       error: 'Erro ao validar arquivo PDF'
@@ -275,7 +276,8 @@ export async function validatePdfFileServer(file: File): Promise<FileValidationR
         error: 'Arquivo não é um PDF válido.'
       };
     }
-  } catch (error) {
+  } catch {
+    // Erro capturado mas não utilizado
     return {
       isValid: false,
       error: 'Erro ao validar arquivo PDF'

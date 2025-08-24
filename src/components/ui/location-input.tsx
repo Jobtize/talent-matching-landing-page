@@ -274,7 +274,7 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
       }
 
       initializeMap()
-    }, [showMap, mapIntegration.isLoaded, selectedLocation]) // Incluir selectedLocation nas dependências
+    }, [showMap, mapIntegration.isLoaded, selectedLocation, lastMapLocation, mapIntegration]) // Incluir todas as dependências
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value

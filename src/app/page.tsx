@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { track } from '@vercel/analytics'
+import { useFormStorage } from '@/hooks/useFormStorage'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
@@ -83,6 +84,9 @@ export default function JobtizeLanding() {
     tecnologias: [],
     curriculo: null
   })
+  
+  // Hook para armazenar dados do formulário para uso posterior
+  const { saveFormData } = useFormStorage()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -133,13 +137,14 @@ export default function JobtizeLanding() {
     }))
   }
 
-  const handleCurriculoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    setFormData(prev => ({
-      ...prev,
-      curriculo: file
-    }))
-  }
+  // Função removida pois não é mais utilizada no novo fluxo
+  // const handleCurriculoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0] || null
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     curriculo: file
+  //   }))
+  // }
 
   // Handlers para validação de PDF
   const handleFilesValidated = (files: ValidatedFile[]) => {
@@ -179,31 +184,31 @@ export default function JobtizeLanding() {
     return Promise.all(uploadPromises)
   }
 
-  // Função antiga mantida para compatibilidade (não usada no novo fluxo)
-  const uploadValidatedFiles = async (): Promise<UploadedFile[]> => {
-    const validFiles = validatedFiles.filter(f => f.status === 'valid')
-    if (validFiles.length === 0) return []
-
-    const uploadPromises = validFiles.map(async (validatedFile) => {
-      const formData = new FormData()
-      formData.append('file', validatedFile.file)
-
-      const response = await fetch('/api/upload-pdf', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Erro no upload do arquivo')
-      }
-
-      return result.data as UploadedFile
-    })
-
-    return Promise.all(uploadPromises)
-  }
+  // Função antiga removida pois não é mais utilizada no novo fluxo
+  // const uploadValidatedFiles = async (): Promise<UploadedFile[]> => {
+  //   const validFiles = validatedFiles.filter(f => f.status === 'valid')
+  //   if (validFiles.length === 0) return []
+  //
+  //   const uploadPromises = validFiles.map(async (validatedFile) => {
+  //     const formData = new FormData()
+  //     formData.append('file', validatedFile.file)
+  //
+  //     const response = await fetch('/api/upload-pdf', {
+  //       method: 'POST',
+  //       body: formData,
+  //     })
+  //
+  //     const result = await response.json()
+  //
+  //     if (!response.ok || !result.success) {
+  //       throw new Error(result.error || 'Erro no upload do arquivo')
+  //     }
+  //
+  //     return result.data as UploadedFile
+  //   })
+  //
+  //   return Promise.all(uploadPromises)
+  // }
 
   // Função para confirmar atualização dos dados
   const handleConfirmUpdate = async () => {
@@ -402,6 +407,18 @@ export default function JobtizeLanding() {
           return
         }
       }
+      
+      // Salvar dados do formulário para uso posterior no cadastro
+      saveFormData({
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        cargo: formData.cargo,
+        experiencia: formData.experiencia,
+        localizacao: formData.localizacao,
+        areas: formData.areas,
+        tecnologias: formData.tecnologias
+      })
       
       // Tracking de conversão
       track('form_submission', {

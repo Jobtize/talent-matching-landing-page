@@ -1,46 +1,68 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { jwtVerify } from 'jose'
 
-export function middleware(request: NextRequest) {
-  // Handle CORS for API routes
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    const response = NextResponse.next()
-    
-    // Get the origin from the request
-    const origin = request.headers.get('origin')
-    
-    // Allow both jobtize.com and www.jobtize.com
-    const allowedOrigins = [
-      'https://jobtize.com',
-      'https://www.jobtize.com',
-      'http://localhost:3000', // for development
-      'http://127.0.0.1:3000'  // for development
-    ]
-    
-    if (origin && allowedOrigins.includes(origin)) {
-      response.headers.set('Access-Control-Allow-Origin', origin)
-    }
-    
-    response.headers.set('Access-Control-Allow-Credentials', 'true')
-    response.headers.set(
-      'Access-Control-Allow-Methods',
-      'GET, POST, PUT, DELETE, OPTIONS'
+// Rotas que requerem autenticação
+const protectedRoutes = ['/dashboard', '/dashboard/perfil', '/dashboard/vagas']
+
+// Rotas de autenticação (não redirecionar para login)
+const authRoutes = ['/login', '/cadastro', '/api/auth']
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  
+  // Verificar se a rota requer autenticação
+  const isProtectedRoute = protectedRoutes.some(route => 
+    pathname === route || pathname.startsWith(`${route}/`)
+  )
+  
+  // Verificar se é uma rota de autenticação
+  const isAuthRoute = authRoutes.some(route => 
+    pathname === route || pathname.startsWith(`${route}/`)
+  )
+  
+  // Se não for uma rota protegida, permitir acesso
+  if (!isProtectedRoute) {
+    return NextResponse.next()
+  }
+  
+  // Obter token de autenticação do cookie
+  const token = request.cookies.get('auth_token')?.value
+  
+  // Se não houver token, redirecionar para login
+  if (!token) {
+    const url = new URL('/login', request.url)
+    url.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(url)
+  }
+  
+  try {
+    // Verificar token JWT
+    const JWT_SECRET = new TextEncoder().encode(
+      process.env.JWT_SECRET || 'your-secret-key-change-in-production'
     )
-    response.headers.set(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Requested-With'
-    )
     
-    // Handle preflight requests
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 200, headers: response.headers })
-    }
+    await jwtVerify(token, JWT_SECRET)
+    
+    // Token válido, permitir acesso
+    return NextResponse.next()
+  } catch (error) {
+    // Token inválido, redirecionar para login
+    console.error('Erro ao verificar token:', error)
+    
+    // Limpar cookie inválido
+    const response = NextResponse.redirect(new URL('/login', request.url))
+    response.cookies.delete('auth_token')
     
     return response
   }
-  
-  return NextResponse.next()
 }
 
+// Configurar quais rotas devem passar pelo middleware
 export const config = {
-  matcher: '/api/:path*'
+  matcher: [
+    '/dashboard/:path*',
+    '/api/dashboard/:path*',
+  ],
 }
+
