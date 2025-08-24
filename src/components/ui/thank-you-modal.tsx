@@ -130,13 +130,13 @@ export function ThankYouModal({
               <Button
                 onClick={handleLinkedInLogin}
                 className={cn(
-                  "w-full bg-[#0077B5] hover:bg-[#006097]",
+                  "w-full bg-[#0A66C2] hover:bg-[#0A59AB]",
                   "text-white font-semibold py-3 px-6 rounded-md transition-all duration-300",
-                  "shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                  "shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                 )}
               >
-                <Linkedin className="w-5 h-5 mr-2" />
-                Continuar com LinkedIn
+                <Linkedin className="w-5 h-5" />
+                <span>Continuar com LinkedIn</span>
               </Button>
             </div>
 
