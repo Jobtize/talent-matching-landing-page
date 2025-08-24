@@ -136,7 +136,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
         const script = document.createElement('script');
         const librariesParam = libraries.length > 0 ? `&libraries=${libraries.join(',')}` : '';
         
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}${librariesParam}&v=weekly`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}${librariesParam}&v=weekly&loading=async`;
         script.async = true;
         script.defer = true;
         
