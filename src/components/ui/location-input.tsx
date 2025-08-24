@@ -381,22 +381,21 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
           const address = 'Minha localização atual'
           setInputValue(address)
           onChange(address)
+        }
+        
+        // Abrir mapa automaticamente se estiver em modo automático
+        if (autoShowMap) {
+          setShowMap(true)
+        }
+        
+        // Inicializar ou atualizar mapa
+        if (mapRef.current) {
+          if (!mapIntegration.mapInstance) {
+            await mapIntegration.initializeMap(mapRef.current, geolocation.coordinates)
+          } else {
+            mapIntegration.centerMap(geolocation.coordinates)
           }
-          
-          // Abrir mapa automaticamente se estiver em modo automático
-          if (autoShowMap) {
-            setShowMap(true)
-          }
-          
-          // Inicializar ou atualizar mapa
-          if (mapRef.current) {
-            if (!mapIntegration.mapInstance) {
-              await mapIntegration.initializeMap(mapRef.current, geolocation.coordinates)
-            } else {
-              mapIntegration.centerMap(geolocation.coordinates)
-            }
-            mapIntegration.addMarker(geolocation.coordinates, 'Minha localização')
-          }
+          mapIntegration.addMarker(geolocation.coordinates, 'Minha localização')
         }
       } catch (error) {
         console.error('Error getting location:', error)
