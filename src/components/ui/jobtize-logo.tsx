@@ -1,4 +1,4 @@
-import React from 'react'
+import Image from 'next/image'
 
 interface JobtizeLogoProps {
   className?: string
@@ -6,11 +6,12 @@ interface JobtizeLogoProps {
   height?: number
 }
 
-export const JobtizeLogo: React.FC<JobtizeLogoProps> = ({ 
+// Convertido para Server Component (removido 'use client')
+export function JobtizeLogo({ 
   className = "", 
   width = 32, 
   height = 32 
-}) => {
+}: JobtizeLogoProps) {
   return (
     <div className={`inline-flex items-center ${className}`}>
       {/* Logo SVG baseada na imagem fornecida */}
