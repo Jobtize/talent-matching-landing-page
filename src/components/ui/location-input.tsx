@@ -277,27 +277,48 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
 
 
 
+    // Inicializar geolocalização quando o componente é montado
+    React.useEffect(() => {
+      // Verificar se o Google Maps está carregado e se a geolocalização é suportada
+      if (mapIntegration.isLoaded && geolocation.isSupported && !geolocation.coordinates) {
+        // Pré-carregar a geolocalização para que esteja pronta quando o usuário clicar no botão
+        geolocation.getCurrentLocation().catch(error => {
+          // Silenciosamente ignorar erros na inicialização automática
+          console.log('Pré-carregamento de geolocalização falhou:', error);
+        });
+      }
+    }, [mapIntegration.isLoaded, geolocation]);
+
     // Obter localização atual usando o hook
     const handleGetCurrentLocation = React.useCallback(async () => {
       try {
-        await geolocation.getCurrentLocation()
-        
+        // Se já temos coordenadas, usar diretamente para evitar espera desnecessária
         if (geolocation.coordinates) {
-          setSelectedLocation(geolocation.coordinates)
+          setSelectedLocation(geolocation.coordinates);
+        } else {
+          // Caso contrário, obter novas coordenadas
+          await geolocation.getCurrentLocation();
           
-          // Tentar obter endereço próximo usando Places API
-          if (locationSearch.isGoogleMapsReady && window.google) {
-            try {
-              const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
-              
-              const request = {
-                locationRestriction: {
-                  center: geolocation.coordinates,
-                  radius: 5000 // 5km de raio
-                },
-                includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1', 'country'],
-                maxResultCount: 10,
-                fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
+          if (!geolocation.coordinates) {
+            throw new Error('Não foi possível obter a localização');
+          }
+          
+          setSelectedLocation(geolocation.coordinates);
+        }
+        
+        // Tentar obter endereço próximo usando Places API
+        if (locationSearch.isGoogleMapsReady && window.google) {
+          try {
+            const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary;
+            
+            const request = {
+              locationRestriction: {
+                center: geolocation.coordinates,
+                radius: 5000 // 5km de raio
+              },
+              includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1', 'country'],
+              maxResultCount: 10,
+              fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
               }
 
               const result = await (Place as unknown as { 
