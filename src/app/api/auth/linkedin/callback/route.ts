@@ -90,14 +90,30 @@ export async function GET(request: NextRequest) {
     
     const userResult = await createUserResponse.json()
     
-    // Criar cookies de autenticação
-    const response = NextResponse.redirect(new URL('/dashboard', request.url))
+    // Redirecionar para a página de perfil em vez do dashboard
+    const response = NextResponse.redirect(new URL('/profile', request.url))
     
     // Definir cookies de autenticação (token JWT, etc.)
     response.cookies.set({
       name: 'auth_token',
       value: userResult.token,
       httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 dias
+    })
+    
+    // Armazenar dados do usuário no localStorage (via cookie não-httpOnly)
+    response.cookies.set({
+      name: 'user_data',
+      value: JSON.stringify({
+        id: userResult.user.id,
+        name: userResult.user.name,
+        email: userResult.user.email,
+        profilePicture: userResult.user.profilePicture,
+      }),
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
