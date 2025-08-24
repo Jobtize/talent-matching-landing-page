@@ -11,64 +11,53 @@ export async function GET(request: NextRequest) {
   try {
     // Obter o token do cabeçalho de autorização
     const authHeader = request.headers.get('authorization')
-    logDebug('Cabeçalho de autorização', { authHeader: authHeader ? 'presente' : 'ausente' })
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logDebug('Token ausente ou formato inválido')
-      return NextResponse.json({ error: 'Token não fornecido' }, { status: 401 })
-    }
-    
-    const token = authHeader.split(' ')[1]
-    logDebug('Token extraído', { token: token ? 'presente' : 'ausente' })
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null
     
     // Verificar se o token existe nos cookies
     const cookies = request.cookies
     const authCookie = cookies.get('auth_token')
     
-    logDebug('Cookie de autenticação', { 
-      cookie: authCookie ? 'presente' : 'ausente',
-      cookieValue: authCookie?.value,
-      tokenMatch: authCookie?.value === token
+    logDebug('Verificação de autenticação', { 
+      authHeader: authHeader ? 'presente' : 'ausente',
+      token: token ? 'presente' : 'ausente',
+      authCookie: authCookie ? 'presente' : 'ausente'
     })
     
-    // Para fins de demonstração, vamos considerar o token válido se existir
-    // Em produção, você deve verificar a validade do token (JWT, etc.)
-    if (token) {
-      // Obter dados do usuário do cookie user_data
-      const userDataCookie = cookies.get('user_data')
-      let userData = null
-      
-      if (userDataCookie) {
-        try {
-          userData = JSON.parse(userDataCookie.value)
-          logDebug('Dados do usuário encontrados', userData)
-        } catch (error) {
-          logDebug('Erro ao analisar dados do usuário', { error })
-        }
-      }
-      
-      // Se não houver dados do usuário, criar um usuário fictício para teste
-      if (!userData) {
-        userData = {
-          id: '123',
-          name: 'Usuário de Teste',
-          email: 'teste@example.com',
-          profilePicture: ''
-        }
-        logDebug('Usando dados de usuário fictício', userData)
-      }
-      
-      return NextResponse.json({ 
-        authenticated: true,
-        user: userData
-      })
+    // Se não há token nem cookie, não está autenticado
+    if (!token && !authCookie) {
+      return NextResponse.json({ authenticated: false }, { status: 401 })
     }
     
-    logDebug('Token inválido')
-    return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    // Usar o token do header ou do cookie
+    const authToken = token || authCookie?.value
+    
+    // Em uma implementação real, aqui você verificaria o JWT ou consultaria
+    // o banco de dados para obter os dados do usuário associados ao token
+    
+    // Simulação: Decodificar o JWT ou buscar dados do usuário
+    // Nota: Em produção, use uma biblioteca como jose para verificar o JWT
+    // ou consulte seu banco de dados usando o token como chave
+    
+    // Exemplo simplificado para demonstração:
+    const userData = {
+      id: '123',
+      name: 'Usuário Exemplo',
+      email: 'usuario@exemplo.com',
+      profilePicture: 'https://via.placeholder.com/150'
+    }
+    
+    // Configurar cabeçalhos para evitar cache
+    const response = NextResponse.json({ 
+      authenticated: true,
+      user: userData
+    })
+    
+    response.headers.set('Cache-Control', 'no-store, max-age=0')
+    
+    return response
   } catch (error) {
     logDebug('Erro ao verificar autenticação', { error })
-    return NextResponse.json({ error: 'Erro ao verificar autenticação' }, { status: 500 })
+    return NextResponse.json({ authenticated: false, error: 'Erro interno' }, { status: 500 })
   }
 }
 

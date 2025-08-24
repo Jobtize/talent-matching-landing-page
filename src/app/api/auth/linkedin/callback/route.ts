@@ -1,59 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Configurações do LinkedIn OAuth
-const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || '77isdg42ka2p5g'
-const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || 'WPL_AP1.ODmhmSDjd6A86EXm.1p3AsQ=='
-// Usar URL absoluta para o redirecionamento
-const LINKEDIN_REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL 
-  ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/linkedin/callback` 
-  : 'http://localhost:3002/api/auth/linkedin/callback'
+const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID!;
+const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET!;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
+const LINKEDIN_REDIRECT_URI = `${SITE_URL}/api/auth/linkedin/callback`;
 
-// Endpoint de token do LinkedIn
-const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken'
-const LINKEDIN_USER_INFO_URL = 'https://api.linkedin.com/v2/userinfo'
+const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken';
+const LINKEDIN_USER_INFO_URL = 'https://api.linkedin.com/v2/userinfo';
 
-// Função simples para debug
-function logDebug(message: string, data?: any) {
-  console.log(`[LinkedIn Callback Debug] ${message}`, data || '')
+function assertEnv() {
+  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET || !SITE_URL) {
+    throw new Error('Missing required envs: LINKEDIN_CLIENT_ID/SECRET and NEXT_PUBLIC_SITE_URL');
+  }
 }
 
 export async function GET(request: NextRequest) {
-  logDebug('Callback iniciado', { url: request.url })
-  // Obter o código de autorização e o estado da URL
-  const searchParams = request.nextUrl.searchParams
-  const code = searchParams.get('code')
-  const state = searchParams.get('state')
-  
-  // Obter o estado armazenado no cookie
-  const cookies = request.cookies
-  const storedState = cookies.get('linkedin_oauth_state')?.value
-  
-  // Verificar se o código e o estado são válidos
-  logDebug('Verificando código e estado', { code: !!code, state, storedState })
-  
-  if (!code) {
-    logDebug('Código ausente, redirecionando para erro')
-    return NextResponse.redirect(new URL('/?error=missing_code', request.url))
+  assertEnv();
+
+  // 1) Parse params
+  const sp = request.nextUrl.searchParams;
+  const code = sp.get('code');
+  const state = sp.get('state');
+
+  // 2) Validate state (anti-CSRF) e limpar
+  const storedState = request.cookies.get('linkedin_oauth_state')?.value;
+  if (!code) return NextResponse.redirect(`${SITE_URL}/?error=missing_code`);
+  if (!state || !storedState || state !== storedState) {
+    return NextResponse.redirect(`${SITE_URL}/?error=invalid_state`);
   }
-  
-  if (!state || state !== storedState) {
-    logDebug('Estado inválido, redirecionando para erro', { state, storedState })
-    return NextResponse.redirect(new URL('/?error=invalid_state', request.url))
-  }
-  
-  logDebug('Código e estado válidos, prosseguindo')
-  
+
   try {
-    // Trocar o código de autorização por um token de acesso
-    logDebug('Iniciando troca de código por token', { 
-      redirect_uri: LINKEDIN_REDIRECT_URI 
-    })
-    
-    const tokenResponse = await fetch(LINKEDIN_TOKEN_URL, {
+    // 3) Troca código por token (server-to-server)
+    const tokenRes = await fetch(LINKEDIN_TOKEN_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
@@ -61,234 +41,87 @@ export async function GET(request: NextRequest) {
         client_secret: LINKEDIN_CLIENT_SECRET,
         redirect_uri: LINKEDIN_REDIRECT_URI,
       }),
-    })
-    
-    logDebug('Resposta da troca de token recebida', { 
-      status: tokenResponse.status,
-      ok: tokenResponse.ok 
-    })
-    
-    if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json()
-      console.error('Erro ao obter token do LinkedIn:', errorData)
-      return NextResponse.redirect(new URL('/?error=token_exchange_failed', request.url))
-    }
-    
-    const tokenData = await tokenResponse.json()
-    const { access_token, id_token } = tokenData
-    
-    // Obter informações do usuário
-    const userInfoResponse = await fetch(LINKEDIN_USER_INFO_URL, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    })
-    
-    if (!userInfoResponse.ok) {
-      console.error('Erro ao obter informações do usuário:', await userInfoResponse.text())
-      return NextResponse.redirect(new URL('/?error=user_info_failed', request.url))
-    }
-    
-    const userData = await userInfoResponse.json()
-    
-    // Criar ou atualizar o usuário no banco de dados
-    const createUserResponse = await fetch(new URL('/api/auth/linkedin-user', request.url).toString(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        linkedinId: userData.sub,
-        email: userData.email,
-        name: userData.name,
-        firstName: userData.given_name,
-        lastName: userData.family_name,
-        profilePicture: userData.picture,
-      }),
-    })
-    
-    if (!createUserResponse.ok) {
-      console.error('Erro ao criar/atualizar usuário:', await createUserResponse.text())
-      return NextResponse.redirect(new URL('/?error=user_creation_failed', request.url))
-    }
-    
-    const userResult = await createUserResponse.json()
-    
-    // Redirecionar para a página de perfil usando URL absoluta
-    const baseUrl = request.nextUrl.origin
-    
-    // Criar HTML para definir localStorage e redirecionar
-    const userDataForStorage = {
-      id: userResult.user.id,
-      name: userResult.user.name,
-      email: userResult.user.email,
-      profilePicture: userResult.user.profilePicture,
-    };
-    
-    const userDataJson = JSON.stringify(userDataForStorage).replace(/'/g, "\\'").replace(/"/g, '\\"');
-    
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Redirecionando...</title>
-          <meta charset="utf-8">
-          <script>
-            // Função para verificar se o localStorage está disponível
-            function isLocalStorageAvailable() {
-              try {
-                const test = 'test';
-                localStorage.setItem(test, test);
-                localStorage.removeItem(test);
-                return true;
-              } catch(e) {
-                return false;
-              }
-            }
-            
-            // Armazenar token e dados do usuário no localStorage
-            function saveAuthData() {
-              try {
-                if (isLocalStorageAvailable()) {
-                  localStorage.setItem('auth_token', '${userResult.token}');
-                  localStorage.setItem('user_data', "${userDataJson}");
-                  console.log('Dados salvos no localStorage com sucesso');
-                  return true;
-                } else {
-                  console.error('localStorage não está disponível');
-                  return false;
-                }
-              } catch (e) {
-                console.error('Erro ao salvar no localStorage:', e);
-                return false;
-              }
-            }
-            
-            // Tentar salvar os dados
-            const saved = saveAuthData();
-            console.log('Status do salvamento:', saved ? 'sucesso' : 'falha');
-            
-            // Definir cookies para autenticação no lado do servidor
-            document.cookie = "auth_token=${userResult.token}; path=/; max-age=2592000; SameSite=Lax";
-            document.cookie = "user_data=${encodeURIComponent(userDataJson)}; path=/; max-age=2592000; SameSite=Lax";
-            console.log('Cookies definidos para autenticação no servidor');
-            
-            // Redirecionar para a página de perfil após um pequeno delay
-            setTimeout(function() {
-              window.location.href = '${baseUrl}/profile';
-            }, 1000);
-          </script>
-        </head>
-        <body>
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif;">
-            <h2>Login realizado com sucesso!</h2>
-            <p>Redirecionando para a página de perfil...</p>
-            <div style="margin-top: 20px; width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <style>
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            </style>
-          </div>
-        </body>
-      </html>
-    `;
-    
-    // Retornar HTML em vez de redirecionamento direto
-    const response = new NextResponse(html, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-      },
+      cache: 'no-store',
     });
-    
-    // Definir cookies de autenticação (token JWT, etc.)
-    response.cookies.set({
-      name: 'auth_token',
-      value: userResult.token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-    })
-    
-    // Armazenar dados do usuário no cookie não-httpOnly
-    response.cookies.set({
-      name: 'user_data',
-      value: JSON.stringify({
-        id: userResult.user.id,
-        name: userResult.user.name,
-        email: userResult.user.email,
-        profilePicture: userResult.user.profilePicture,
+
+    if (!tokenRes.ok) {
+      const txt = await tokenRes.text().catch(() => '');
+      console.error('LinkedIn token exchange failed', tokenRes.status, txt);
+      return NextResponse.redirect(`${SITE_URL}/?error=token_exchange_failed`);
+    }
+
+    const { access_token, expires_in /*, id_token*/ } = await tokenRes.json();
+
+    // 4) Buscar perfil OIDC (requer scopes: openid profile email)
+    const userInfoRes = await fetch(LINKEDIN_USER_INFO_URL, {
+      headers: { Authorization: `Bearer ${access_token}` },
+      cache: 'no-store',
+    });
+
+    if (!userInfoRes.ok) {
+      const txt = await userInfoRes.text().catch(() => '');
+      console.error('LinkedIn userinfo failed', userInfoRes.status, txt);
+      return NextResponse.redirect(`${SITE_URL}/?error=user_info_failed`);
+    }
+
+    const user = await userInfoRes.json();
+    // Opcional: validar id_token/nonce com `jose` (recomendado se usar OIDC).
+
+    // 5) Criar/atualizar usuário e emitir sessão server-side
+    const createUserRes = await fetch(`${SITE_URL}/api/auth/linkedin-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // Envie só o necessário; nunca confie em campos client-side
+      body: JSON.stringify({
+        linkedinId: user.sub,
+        email: user.email,
+        name: user.name,
+        firstName: user.given_name,
+        lastName: user.family_name,
+        profilePicture: user.picture,
       }),
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      cache: 'no-store',
+    });
+
+    if (!createUserRes.ok) {
+      const txt = await createUserRes.text().catch(() => '');
+      console.error('Create/update user failed', createUserRes.status, txt);
+      return NextResponse.redirect(`${SITE_URL}/?error=user_creation_failed`);
+    }
+
+    const { token /* JWT da sua API */, user: savedUser } = await createUserRes.json();
+
+    // 6) Resposta: set cookie httpOnly + limpeza de state + redirect
+    const res = NextResponse.redirect(`${SITE_URL}/profile`, { status: 302 });
+    // Cookie de sessão (JWT ou session-id)
+    res.cookies.set({
+      name: 'auth_token',
+      value: token,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-    })
-    
-    // Limpar o cookie de estado
-    response.cookies.set({
+      maxAge: Math.min(Number(expires_in ?? 3600), 60 * 60 * 24 * 7), // cap em 7d
+    });
+
+    // Remover o state
+    res.cookies.set({
       name: 'linkedin_oauth_state',
       value: '',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'strict',
       path: '/',
       maxAge: 0,
-    })
-    
-    return response
-  } catch (error) {
-    console.error('Erro no processo de autenticação do LinkedIn:', error)
-    logDebug('Erro capturado no try/catch', { error: error instanceof Error ? error.message : String(error) })
-    
-    // Responder com uma página HTML simples em vez de redirecionar
-    return new NextResponse(
-      `<!DOCTYPE html>
-      <html>
-        <head>
-          <title>Erro de Autenticação</title>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-            .error-container { max-width: 600px; margin: 0 auto; }
-            .error-title { color: #e74c3c; }
-            .error-message { margin: 20px 0; }
-            .home-link { display: inline-block; margin-top: 20px; padding: 10px 20px; 
-                        background-color: #3498db; color: white; text-decoration: none; 
-                        border-radius: 4px; }
-          </style>
-        </head>
-        <body>
-          <div class="error-container">
-            <h1 class="error-title">Erro de Autenticação</h1>
-            <p class="error-message">
-              Ocorreu um erro durante o processo de autenticação com o LinkedIn.
-              Por favor, tente novamente mais tarde.
-            </p>
-            <a href="/" class="home-link">Voltar para a página inicial</a>
-          </div>
-          <script>
-            // Registrar erro no console do navegador
-            console.error("Erro de autenticação do LinkedIn");
-            
-            // Redirecionar para a página inicial após 5 segundos
-            setTimeout(() => {
-              window.location.href = "/";
-            }, 5000);
-          </script>
-        </body>
-      </html>`,
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-        },
-      }
-    )
+    });
+
+    // Evitar cache intermediário
+    res.headers.set('Cache-Control', 'no-store');
+
+    return res;
+  } catch (err) {
+    console.error('LinkedIn callback error', err);
+    return NextResponse.redirect(`${SITE_URL}/?error=internal_auth_error`);
   }
 }
+

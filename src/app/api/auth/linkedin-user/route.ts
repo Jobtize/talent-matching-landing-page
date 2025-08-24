@@ -1,67 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
 
-// Chave secreta para assinar tokens JWT
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+// Função para gerar um token JWT simples
+// Em produção, use uma biblioteca como jose para gerar tokens seguros
+function generateToken(userId: string): string {
+  // Simulação simples - em produção, use uma biblioteca adequada
+  return `simulated-jwt-token-${userId}-${Date.now()}`
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Obter dados do usuário do LinkedIn
     const userData = await request.json()
     
     // Validar dados necessários
-    if (!userData.linkedinId || !userData.email) {
+    if (!userData.linkedinId) {
       return NextResponse.json(
-        { error: 'Dados de usuário incompletos' },
+        { error: 'ID do LinkedIn é obrigatório' },
         { status: 400 }
       )
     }
     
-    // Aqui você implementaria a lógica para criar ou atualizar o usuário no seu banco de dados
-    // Por enquanto, vamos simular isso retornando os dados do usuário
+    // Em uma implementação real, você salvaria esses dados no banco de dados
+    // e criaria ou atualizaria o usuário
     
-    // Exemplo: verificar se o usuário já existe
-    // const existingUser = await db.users.findUnique({ where: { email: userData.email } })
-    
-    // Exemplo: criar ou atualizar usuário
-    // const user = existingUser 
-    //   ? await db.users.update({ where: { id: existingUser.id }, data: { ...userData } })
-    //   : await db.users.create({ data: { ...userData } })
-    
-    // Simular usuário criado/atualizado
+    // Simulação: Criar ou atualizar usuário
     const user = {
-      id: `user_${Math.random().toString(36).substring(2, 9)}`,
-      ...userData,
+      id: userData.linkedinId,
+      name: userData.name || 'Usuário LinkedIn',
+      email: userData.email || 'usuario@linkedin.com',
+      firstName: userData.firstName || '',
+      lastName: userData.lastName || '',
+      profilePicture: userData.profilePicture || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     
-    // Gerar token JWT
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    // Gerar token de autenticação
+    const token = generateToken(user.id)
     
+    // Retornar usuário e token
     return NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profilePicture: user.profilePicture,
-      },
+      user,
       token,
     })
   } catch (error) {
     console.error('Erro ao processar usuário do LinkedIn:', error)
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro ao processar usuário' },
       { status: 500 }
     )
   }

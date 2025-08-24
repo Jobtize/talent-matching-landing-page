@@ -1,48 +1,51 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
 
-// Configurações do LinkedIn OAuth
-const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || '77isdg42ka2p5g'
-// Usar URL absoluta para o redirecionamento
-const LINKEDIN_REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL 
-  ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/linkedin/callback` 
-  : 'http://localhost:3002/api/auth/linkedin/callback'
-const LINKEDIN_SCOPE = 'openid profile email'
+const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID!;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
+const LINKEDIN_REDIRECT_URI = `${SITE_URL}/api/auth/linkedin/callback`;
 
-// Endpoint de autorização do LinkedIn
-const LINKEDIN_AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization'
+const LINKEDIN_AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization';
 
-// Função simples para debug
-function logDebug(message: string, data?: any) {
-  console.log(`[LinkedIn Auth Debug] ${message}`, data || '')
+function assertEnv() {
+  if (!LINKEDIN_CLIENT_ID || !SITE_URL) {
+    throw new Error('Missing required envs: LINKEDIN_CLIENT_ID and NEXT_PUBLIC_SITE_URL');
+  }
 }
 
-export async function GET() {
-  logDebug('Iniciando autenticação LinkedIn')
-  
-  // Gerar um estado aleatório para segurança
-  const state = Math.random().toString(36).substring(2, 15)
-  logDebug('Estado gerado', { state })
-  
-  // Construir URL de autorização
-  const authUrl = new URL(LINKEDIN_AUTH_URL)
-  authUrl.searchParams.append('response_type', 'code')
-  authUrl.searchParams.append('client_id', LINKEDIN_CLIENT_ID)
-  authUrl.searchParams.append('redirect_uri', LINKEDIN_REDIRECT_URI)
-  authUrl.searchParams.append('state', state)
-  authUrl.searchParams.append('scope', LINKEDIN_SCOPE)
-  
-  logDebug('URL de autorização construída', { 
-    url: authUrl.toString(),
-    redirect_uri: LINKEDIN_REDIRECT_URI
-  })
-  
-  // Armazenar o estado em um cookie para validação posterior
-  const headers = new Headers()
-  headers.append('Set-Cookie', `linkedin_oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600`)
-  
-  // Redirecionar para a página de autorização do LinkedIn
-  logDebug('Redirecionando para LinkedIn')
-  return NextResponse.redirect(authUrl.toString(), {
-    headers
-  })
+export async function GET(request: NextRequest) {
+  assertEnv();
+
+  try {
+    // Gerar state para proteção CSRF
+    const state = randomBytes(32).toString('hex');
+    
+    // Construir URL de autorização
+    const authUrl = new URL(LINKEDIN_AUTH_URL);
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('client_id', LINKEDIN_CLIENT_ID);
+    authUrl.searchParams.append('redirect_uri', LINKEDIN_REDIRECT_URI);
+    authUrl.searchParams.append('state', state);
+    authUrl.searchParams.append('scope', 'openid profile email');
+    
+    // Redirecionar para LinkedIn com cookie de state
+    const response = NextResponse.redirect(authUrl.toString());
+    
+    // Definir cookie de state (curto, httpOnly, strict)
+    response.cookies.set({
+      name: 'linkedin_oauth_state',
+      value: state,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 15, // 15 minutos
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('LinkedIn auth error:', error);
+    return NextResponse.redirect(`${SITE_URL}/?error=auth_init_failed`);
+  }
 }
+

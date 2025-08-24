@@ -54,83 +54,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return // Não fazer nada no servidor
         }
         
-        // Verificar se há token no localStorage
-        let storedToken = null
+        // Verificar autenticação via API
         try {
-          storedToken = localStorage.getItem('auth_token')
-          console.log('Token do localStorage:', storedToken ? 'presente' : 'ausente')
-        } catch (e) {
-          console.error('Erro ao acessar localStorage:', e)
-        }
-        
-        // Verificar se há dados do usuário no localStorage
-        let userData = null
-        try {
-          const userDataStr = localStorage.getItem('user_data')
-          if (userDataStr) {
-            userData = JSON.parse(userDataStr)
-            console.log('Dados do usuário do localStorage:', userData)
-          }
-        } catch (e) {
-          console.error('Erro ao acessar dados do usuário:', e)
-        }
-        
-        // Se temos dados do usuário no localStorage, considerar autenticado
-        if (userData && storedToken) {
-          console.log('Autenticado com dados do localStorage')
-          setUser(userData)
-          setToken(storedToken)
-          setIsLoading(false)
-          setAuthInitialized(true)
-          return
-        }
-        
-        // Verificar cookies como fallback
-        try {
-          const cookies = document.cookie.split(';')
-          const authCookie = cookies.find(c => c.trim().startsWith('auth_token='))
-          const userCookie = cookies.find(c => c.trim().startsWith('user_data='))
-          
-          console.log('Cookies encontrados:', { 
-            authCookie: authCookie ? 'presente' : 'ausente',
-            userCookie: userCookie ? 'presente' : 'ausente'
+          console.log('Verificando autenticação via API...')
+          const response = await fetch('/api/me', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            cache: 'no-store',
           })
           
-          // Se temos dados do usuário nos cookies, considerar autenticado
-          if (userCookie) {
-            try {
-              const userDataStr = decodeURIComponent(userCookie.split('=')[1])
-              userData = JSON.parse(userDataStr)
-              console.log('Usando dados do usuário dos cookies:', userData)
-              
-              if (userData) {
-                console.log('Autenticado com dados dos cookies')
-                setUser(userData)
-                setToken(authCookie ? authCookie.split('=')[1] : null)
-                
-                // Salvar no localStorage para futuras verificações
-                try {
-                  localStorage.setItem('auth_token', authCookie ? authCookie.split('=')[1] : '')
-                  localStorage.setItem('user_data', JSON.stringify(userData))
-                  console.log('Dados salvos no localStorage a partir dos cookies')
-                } catch (e) {
-                  console.error('Erro ao salvar dados no localStorage:', e)
-                }
-                
-                setIsLoading(false)
-                setAuthInitialized(true)
-                return
-              }
-            } catch (e) {
-              console.error('Erro ao processar dados do usuário dos cookies:', e)
+          if (response.ok) {
+            const data = await response.json()
+            
+            if (data.authenticated && data.user) {
+              console.log('Autenticado via API')
+              setUser(data.user)
+              setToken('token-via-cookie') // O token real está no cookie httpOnly
+              setIsLoading(false)
+              setAuthInitialized(true)
+              return
             }
           }
-        } catch (e) {
-          console.error('Erro ao processar cookies:', e)
+          
+          console.log('Não autenticado via API')
+        } catch (error) {
+          console.error('Erro ao verificar autenticação via API:', error)
         }
         
-        // Se chegamos aqui, não temos dados de autenticação válidos
-        console.log('Nenhum dado de autenticação válido encontrado')
+        // Se chegamos aqui, não estamos autenticados
         setUser(null)
         setToken(null)
         setIsLoading(false)
@@ -156,17 +109,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Função de login
   const login = (newToken: string, newUser: User) => {
     console.log('Login realizado:', { user: newUser })
-    
-    // Salvar no localStorage (cliente)
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('auth_token', newToken)
-        localStorage.setItem('user_data', JSON.stringify(newUser))
-      } catch (e) {
-        console.error('Erro ao salvar no localStorage:', e)
-      }
-    }
-    
     setToken(newToken)
     setUser(newUser)
   }
@@ -175,19 +117,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     console.log('Logout realizado')
     
-    // Limpar localStorage (cliente)
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('user_data')
-      } catch (e) {
-        console.error('Erro ao limpar localStorage:', e)
-      }
-    }
-    
+    // Limpar estado
     setToken(null)
     setUser(null)
-    router.push('/')
+    
+    // Chamar API de logout para limpar cookies no servidor
+    if (typeof window !== 'undefined') {
+      // Fazer uma requisição para a API de logout
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        cache: 'no-store',
+      })
+      .then(() => {
+        console.log('Logout realizado com sucesso no servidor')
+        // Redirecionar para a página inicial
+        window.location.href = '/'
+      })
+      .catch(error => {
+        console.error('Erro ao fazer logout no servidor:', error)
+        // Mesmo com erro, redirecionar para a página inicial
+        window.location.href = '/'
+      })
+    } else {
+      // Fallback para o caso de não conseguir chamar a API
+      if (typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
+    }
   }
 
   // Função para atualizar dados do usuário
