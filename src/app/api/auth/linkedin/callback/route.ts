@@ -6,7 +6,7 @@ const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || 'WPL_AP1.OD
 // Usar URL absoluta para o redirecionamento
 const LINKEDIN_REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL 
   ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/linkedin/callback` 
-  : 'http://localhost:3000/api/auth/linkedin/callback'
+  : 'http://localhost:3002/api/auth/linkedin/callback'
 
 // Endpoint de token do LinkedIn
 const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken'
