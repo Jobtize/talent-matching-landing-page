@@ -85,13 +85,24 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
     // Converter sugestões para o formato esperado pelo SuggestionsList
     const suggestionData: SuggestionData[] = React.useMemo(() => 
       locationSearch.suggestions.map(suggestion => {
-        // Corrigir problema de duplicação de nomes (ex: "Leblon, Leblon, Rio de Janeiro")
+        // Corrigir problema de duplicação de nomes (ex: "Leblon, Leblon, Rio de Janeiro" ou "Teresópolis, Teresópolis - RJ, Brasil")
         let mainText = suggestion.structured_formatting.main_text;
         let secondaryText = suggestion.structured_formatting.secondary_text;
         
-        // Se o texto principal aparece no início do texto secundário, remover a duplicação
+        // Verificar diferentes padrões de duplicação
+        
+        // Padrão 1: "Leblon, Leblon, Rio de Janeiro"
         if (secondaryText.startsWith(mainText + ', ')) {
           secondaryText = secondaryText.substring(mainText.length + 2); // +2 para remover a vírgula e o espaço
+        }
+        
+        // Padrão 2: "Teresópolis, Teresópolis - RJ, Brasil"
+        const pattern = new RegExp(`^${mainText}[\\s,-]+${mainText}`);
+        if (pattern.test(secondaryText)) {
+          // Remover a primeira ocorrência do mainText no secondaryText
+          secondaryText = secondaryText.replace(mainText, '').trim();
+          // Remover vírgula ou hífen inicial se existir
+          secondaryText = secondaryText.replace(/^[,\s-]+/, '');
         }
         
         return {
