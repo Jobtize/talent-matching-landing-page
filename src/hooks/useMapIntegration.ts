@@ -259,7 +259,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       currentMarker.setMap(null);
       setCurrentMarker(null);
     }
-  }, [currentMarker]);
+  }, []);
 
   const centerMap = useCallback((position: { lat: number; lng: number }) => {
     const map = mapRef.current;
@@ -287,7 +287,7 @@ export function useMapIntegration(options: UseMapIntegrationOptions = {}): UseMa
       mapRef.current = null;
       setMapInstance(null);
     }
-  }, [currentMarker]);
+  }, []);
 
   // Auto-carregar Google Maps se a API key estiver disponível
   useEffect(() => {

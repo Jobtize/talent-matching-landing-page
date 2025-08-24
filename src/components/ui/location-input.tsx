@@ -222,6 +222,13 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
       return;
     }
     
+    // Verificar se a localização realmente mudou para evitar atualizações desnecessárias
+    if (lastMapLocation && 
+        lastMapLocation.lat === selectedLocation.lat && 
+        lastMapLocation.lng === selectedLocation.lng) {
+      return;
+    }
+    
     // Atualizar o centro do mapa e o marcador
     mapIntegration.centerMap(selectedLocation);
     
@@ -231,7 +238,7 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
     
     // Atualizar última localização
     setLastMapLocation(selectedLocation);
-  }, [selectedLocation, mapIntegration, showMap]);
+  }, [selectedLocation, mapIntegration, showMap, lastMapLocation]);
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
