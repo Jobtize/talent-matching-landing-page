@@ -1,15 +1,23 @@
 {
-  "redirects": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/:path*",
-      "destination": "https://www.jobtize.com/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "jobtize.com"
-        }
-      ],
-      "permanent": true
+      "src": "package.json",
+      "use": "@vercel/next"
     }
-  ]
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_VERCEL_ENV": "preview"
+  },
+  "github": {
+    "enabled": true,
+    "silent": false
+  }
 }
+

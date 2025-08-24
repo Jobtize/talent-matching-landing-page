@@ -9,6 +9,11 @@ const protectedRoutes = ['/dashboard', '/dashboard/perfil', '/dashboard/vagas']
 const authRoutes = ['/login', '/cadastro', '/api/auth']
 
 export async function middleware(request: NextRequest) {
+  // Permitir acesso a todas as rotas no ambiente de preview
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview') {
+    return NextResponse.next()
+  }
+  
   const { pathname } = request.nextUrl
   
   // Verificar se a rota requer autenticação
@@ -65,4 +70,3 @@ export const config = {
     '/api/dashboard/:path*',
   ],
 }
-
