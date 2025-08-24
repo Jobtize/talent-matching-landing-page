@@ -116,7 +116,45 @@ export async function GET(request: NextRequest) {
     
     // Redirecionar para a página de perfil usando URL absoluta
     const baseUrl = request.nextUrl.origin
-    const response = NextResponse.redirect(`${baseUrl}/profile`)
+    
+    // Criar HTML para definir localStorage e redirecionar
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Redirecionando...</title>
+          <meta charset="utf-8">
+          <script>
+            // Armazenar token e dados do usuário no localStorage
+            try {
+              localStorage.setItem('auth_token', '${userResult.token}');
+              localStorage.setItem('user_data', '${JSON.stringify({
+                id: userResult.user.id,
+                name: userResult.user.name,
+                email: userResult.user.email,
+                profilePicture: userResult.user.profilePicture,
+              }).replace(/'/g, "\\'")}');
+              console.log('Dados salvos no localStorage');
+            } catch (e) {
+              console.error('Erro ao salvar no localStorage:', e);
+            }
+            
+            // Redirecionar para a página de perfil
+            window.location.href = '${baseUrl}/profile';
+          </script>
+        </head>
+        <body>
+          <p>Redirecionando para a página de perfil...</p>
+        </body>
+      </html>
+    `;
+    
+    // Retornar HTML em vez de redirecionamento direto
+    const response = new NextResponse(html, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+      },
+    });
     
     // Definir cookies de autenticação (token JWT, etc.)
     response.cookies.set({
@@ -129,7 +167,7 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7, // 7 dias
     })
     
-    // Armazenar dados do usuário no localStorage (via cookie não-httpOnly)
+    // Armazenar dados do usuário no cookie não-httpOnly
     response.cookies.set({
       name: 'user_data',
       value: JSON.stringify({
