@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 // Configurações do LinkedIn OAuth
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || '77isdg42ka2p5g'
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || 'WPL_AP1.ODmhmSDjd6A86EXm.1p3AsQ=='
-const LINKEDIN_REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI || 'http://localhost:3000/api/auth/linkedin/callback'
+// Usar URL absoluta para o redirecionamento
+const LINKEDIN_REDIRECT_URI = process.env.NEXT_PUBLIC_SITE_URL 
+  ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/linkedin/callback` 
+  : 'http://localhost:3000/api/auth/linkedin/callback'
 
 // Endpoint de token do LinkedIn
 const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken'
@@ -90,8 +93,9 @@ export async function GET(request: NextRequest) {
     
     const userResult = await createUserResponse.json()
     
-    // Redirecionar para a página de perfil em vez do dashboard
-    const response = NextResponse.redirect(new URL('/profile', request.url))
+    // Redirecionar para a página de perfil usando URL absoluta
+    const baseUrl = request.nextUrl.origin
+    const response = NextResponse.redirect(`${baseUrl}/profile`)
     
     // Definir cookies de autenticação (token JWT, etc.)
     response.cookies.set({
