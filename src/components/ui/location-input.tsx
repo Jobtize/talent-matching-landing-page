@@ -89,20 +89,22 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
         let mainText = suggestion.structured_formatting.main_text;
         let secondaryText = suggestion.structured_formatting.secondary_text;
         
-        // Verificar diferentes padrões de duplicação
+        // Verificar se o texto completo contém duplicação do nome principal
+        const fullText = mainText + ', ' + secondaryText;
         
-        // Padrão 1: "Leblon, Leblon, Rio de Janeiro"
-        if (secondaryText.startsWith(mainText + ', ')) {
-          secondaryText = secondaryText.substring(mainText.length + 2); // +2 para remover a vírgula e o espaço
+        // Caso específico para "Teresópolis, Teresópolis - RJ, Brasil"
+        if (fullText.includes(mainText + ', ' + mainText)) {
+          // Remover a duplicação e formatar corretamente
+          const parts = secondaryText.split(mainText);
+          if (parts.length > 1) {
+            // Pegar a parte após a duplicação e limpar
+            secondaryText = parts[1].replace(/^[,\s-]+/, '').trim();
+          }
         }
         
-        // Padrão 2: "Teresópolis, Teresópolis - RJ, Brasil"
-        const pattern = new RegExp(`^${mainText}[\\s,-]+${mainText}`);
-        if (pattern.test(secondaryText)) {
-          // Remover a primeira ocorrência do mainText no secondaryText
-          secondaryText = secondaryText.replace(mainText, '').trim();
-          // Remover vírgula ou hífen inicial se existir
-          secondaryText = secondaryText.replace(/^[,\s-]+/, '');
+        // Padrão 1: "Leblon, Leblon, Rio de Janeiro"
+        else if (secondaryText.startsWith(mainText + ', ')) {
+          secondaryText = secondaryText.substring(mainText.length + 2); // +2 para remover a vírgula e o espaço
         }
         
         return {
