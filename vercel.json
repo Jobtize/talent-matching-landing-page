@@ -17,7 +17,13 @@
   },
   "github": {
     "enabled": true,
-    "silent": false
+    "silent": false,
+    "autoAlias": true,
+    "production": {
+      "branch": "main"
+    },
+    "preview": {
+      "branch": "preview"
+    }
   }
 }
-
