@@ -90,8 +90,9 @@ export async function GET(request: NextRequest) {
     
     const userResult = await createUserResponse.json()
     
-    // Redirecionar para a página de perfil em vez do dashboard
-    const response = NextResponse.redirect(new URL('/profile', request.url))
+    // Redirecionar para a página de perfil usando URL absoluta
+    const baseUrl = request.nextUrl.origin
+    const response = NextResponse.redirect(`${baseUrl}/profile`)
     
     // Definir cookies de autenticação (token JWT, etc.)
     response.cookies.set({
