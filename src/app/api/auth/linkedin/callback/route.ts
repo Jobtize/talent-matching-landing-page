@@ -118,14 +118,14 @@ export async function GET(request: NextRequest) {
     const baseUrl = request.nextUrl.origin
     
     // Criar HTML para definir localStorage e redirecionar
-    const userData = {
+    const userDataForStorage = {
       id: userResult.user.id,
       name: userResult.user.name,
       email: userResult.user.email,
       profilePicture: userResult.user.profilePicture,
     };
     
-    const userDataJson = JSON.stringify(userData).replace(/'/g, "\\'").replace(/"/g, '\\"');
+    const userDataJson = JSON.stringify(userDataForStorage).replace(/'/g, "\\'").replace(/"/g, '\\"');
     
     const html = `
       <!DOCTYPE html>
