@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { track } from '@vercel/analytics'
+import { useFormStorage } from '@/hooks/useFormStorage'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
@@ -11,6 +12,8 @@ import { JobtizeLogo } from '@/components/ui/jobtize-logo'
 import PdfUpload, { ValidatedFile, PdfUploadRef } from '@/components/ui/pdf-upload'
 import { ThankYouModal } from '@/components/ui/thank-you-modal'
 import ClientOnly from '@/components/ClientOnly'
+import { useRouter } from 'next/navigation'
+import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics'
 import { 
   Briefcase, 
   TrendingUp, 
@@ -23,7 +26,8 @@ import {
   Loader2,
   AlertCircle,
   Download,
-  FileText
+  FileText,
+  Linkedin
 } from 'lucide-react'
 
 interface FormData {
@@ -72,6 +76,9 @@ interface PendingFormData {
 }
 
 export default function JobtizeLanding() {
+  const router = useRouter()
+  const { sendEvent } = useGoogleAnalytics()
+  
   const [formData, setFormData] = useState<FormData>({
     nome: '',
     email: '',
@@ -83,6 +90,9 @@ export default function JobtizeLanding() {
     tecnologias: [],
     curriculo: null
   })
+  
+  // Hook para armazenar dados do formulário para uso posterior
+  const { saveFormData } = useFormStorage()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -404,6 +414,18 @@ export default function JobtizeLanding() {
         }
       }
       
+      // Salvar dados do formulário para uso posterior no cadastro
+      saveFormData({
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        cargo: formData.cargo,
+        experiencia: formData.experiencia,
+        localizacao: formData.localizacao,
+        areas: formData.areas,
+        tecnologias: formData.tecnologias
+      })
+      
       // Tracking de conversão
       track('form_submission', {
         type: 'new_candidate',
@@ -456,7 +478,7 @@ export default function JobtizeLanding() {
               <JobtizeLogo width={32} height={32} />
               <span className="text-xl font-bold text-gray-900">Jobtize</span>
             </div>
-            <nav className="hidden md:flex space-x-8">
+            <nav className="hidden md:flex items-center space-x-8">
               <a href="#como-funciona" className="text-gray-600 hover:text-blue-600 transition-colors">
                 Como Funciona
               </a>
@@ -466,6 +488,23 @@ export default function JobtizeLanding() {
               <a href="#depoimentos" className="text-gray-600 hover:text-blue-600 transition-colors">
                 Depoimentos
               </a>
+              <Button
+                onClick={() => {
+                  track('linkedin_login_click', {
+                    source: 'landing_page'
+                  })
+                  
+                  sendEvent('linkedin_login_click', {
+                    source: 'landing_page'
+                  })
+                  
+                  router.push('/api/auth/linkedin')
+                }}
+                className="flex items-center gap-2 bg-[#0077B5] hover:bg-[#006097] text-white px-4 py-2 rounded-md font-medium text-sm"
+              >
+                <Linkedin className="w-4 h-4" />
+                <span>Entrar com LinkedIn</span>
+              </Button>
             </nav>
           </div>
         </div>
@@ -484,6 +523,7 @@ export default function JobtizeLanding() {
                 Pare de procurar emprego. Nossa plataforma inteligente conecta você às melhores 
                 oportunidades baseadas no seu perfil profissional.
               </p>
+              
 
             </div>
 
@@ -623,7 +663,7 @@ export default function JobtizeLanding() {
                 {/* Campo de Currículo */}
                 {/* Upload de PDF */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-500">
                     📄 Currículo (PDF) - Opcional
                   </label>
                   <PdfUpload

@@ -84,15 +84,40 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
 
     // Converter sugestões para o formato esperado pelo SuggestionsList
     const suggestionData: SuggestionData[] = React.useMemo(() => 
-      locationSearch.suggestions.map(suggestion => ({
-        id: suggestion.place_id,
-        mainText: suggestion.structured_formatting.main_text,
-        secondaryText: suggestion.structured_formatting.secondary_text
-      })), [locationSearch.suggestions]
+      locationSearch.suggestions.map(suggestion => {
+        // Corrigir problema de duplicação de nomes (ex: "Leblon, Leblon, Rio de Janeiro" ou "Teresópolis, Teresópolis - RJ, Brasil")
+        let mainText = suggestion.structured_formatting.main_text;
+        let secondaryText = suggestion.structured_formatting.secondary_text;
+        
+        // Verificar se o texto completo contém duplicação do nome principal
+        const fullText = mainText + ', ' + secondaryText;
+        
+        // Caso específico para "Teresópolis, Teresópolis - RJ, Brasil"
+        if (fullText.includes(mainText + ', ' + mainText)) {
+          // Remover a duplicação e formatar corretamente
+          const parts = secondaryText.split(mainText);
+          if (parts.length > 1) {
+            // Pegar a parte após a duplicação e limpar
+            secondaryText = parts[1].replace(/^[,\s-]+/, '').trim();
+          }
+        }
+        
+        // Padrão 1: "Leblon, Leblon, Rio de Janeiro"
+        else if (secondaryText.startsWith(mainText + ', ')) {
+          secondaryText = secondaryText.substring(mainText.length + 2); // +2 para remover a vírgula e o espaço
+        }
+        
+        return {
+          id: suggestion.place_id,
+          mainText: mainText,
+          secondaryText: secondaryText
+        };
+      }), [locationSearch.suggestions]
     )
 
     // Função para lidar com seleção de sugestão
     const handleSuggestionSelect = React.useCallback(async (suggestion: SuggestionData) => {
+      // Formatar o texto selecionado corretamente
       const selectedText = suggestion.mainText + (suggestion.secondaryText ? `, ${suggestion.secondaryText}` : '')
       setInputValue(selectedText)
       setShowSuggestions(false)
@@ -167,114 +192,78 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
     }, [value])
 
     // Gerenciar mapa: inicialização e atualizações de localização
-    React.useEffect(() => {
-      console.log('🔄 useEffect executado')
-      console.log('🔄 showMap:', showMap)
-      console.log('🔄 mapRef.current:', !!mapRef.current)
-      console.log('🔄 mapIntegration.isLoaded:', mapIntegration.isLoaded)
-      
-      const initializeMap = async () => {
-        console.log('🔄 initializeMap função chamada')
+    // Efeito para inicializar o mapa quando showMap muda para true
+  React.useEffect(() => {
+    // Só executar quando o mapa deve ser mostrado e temos os recursos necessários
+    if (!showMap || !mapRef.current || !mapIntegration.isLoaded) {
+      return;
+    }
+    
+    // Flag para controlar se o efeito ainda está ativo
+    let isMounted = true;
+    
+    // Função para configurar o mapa
+    const setupMap = async () => {
+      try {
+        // Determinar localização a ser usada
+        const locationToUse = selectedLocation || SAO_PAULO_CENTER;
+        const markerTitle = selectedLocation ? 'Localização selecionada' : 'São Paulo - SP, Brasil';
         
-        if (showMap && mapRef.current && mapIntegration.isLoaded) {
-          console.log('🗺️ === INICIANDO MAPA ===')
-          console.log('🗺️ MapRef atual:', mapRef.current)
-          console.log('🗺️ MapIntegration isLoaded:', mapIntegration.isLoaded)
-          console.log('🗺️ MapInstance existe:', !!mapIntegration.mapInstance)
-          console.log('🗺️ SelectedLocation:', selectedLocation)
-          console.log('🗺️ LastMapLocation:', lastMapLocation)
-          
-          try {
-            console.log('🔄 Entrando no try block')
-            
-            // SEMPRE recriar o mapa quando o elemento DOM for recriado
-            console.log('🗺️ Limpando instância anterior e criando nova...')
-            mapIntegration.clearMap()
-            console.log('🔄 clearMap executado')
-            
-            // Determinar qual localização usar
-            console.log('🔄 Determinando localização...')
-            const locationToUse = selectedLocation || SAO_PAULO_CENTER
-            const markerTitle = selectedLocation ? 'Localização selecionada' : 'São Paulo - SP, Brasil'
-            console.log('🔄 Localização determinada')
-            
-            console.log('🗺️ Localização escolhida:', locationToUse)
-            console.log('🗺️ Título do marcador:', markerTitle)
-            
-            // Inicializar mapa
-            console.log('🗺️ Chamando mapIntegration.initializeMap...')
-            console.log('🗺️ mapRef.current:', mapRef.current)
-            console.log('🗺️ locationToUse:', locationToUse)
-            console.log('🗺️ mapIntegration:', mapIntegration)
-            console.log('🗺️ mapIntegration.initializeMap:', typeof mapIntegration.initializeMap)
-            
-            try {
-              const mapInstanceDirect = await mapIntegration.initializeMap(mapRef.current, locationToUse)
-              console.log('🗺️ initializeMap retornou com sucesso')
-              console.log('🗺️ mapInstanceDirect:', !!mapInstanceDirect)
-              
-              // Se temos a instância direta, usar ela para adicionar o marcador
-              if (mapInstanceDirect) {
-                console.log('🗺️ Usando instância direta para adicionar marcador')
-                mapIntegration.addMarker(locationToUse, markerTitle)
-                console.log('🗺️ Marcador adicionado com instância direta!')
-                return // Sair da função, não precisamos do retry loop
-              }
-            } catch (error) {
-              console.error('🗺️ ERRO em initializeMap:', error)
-              throw error
-            }
-            
-            // Atualizar última localização
-            setLastMapLocation(locationToUse)
-            
-            // Aguardar mapInstance ser atualizado no estado e adicionar marcador
-            let retryCount = 0
-            const maxRetries = 50 // Máximo 5 segundos (50 * 100ms)
-            
-            const waitForMapAndAddMarker = () => {
-              console.log('📍 === VERIFICANDO MAPA PARA ADICIONAR MARCADOR ===')
-              console.log('📍 Tentativa:', retryCount + 1, '/', maxRetries)
-              console.log('📍 Posição:', locationToUse)
-              console.log('📍 Título:', markerTitle)
-              console.log('📍 MapInstance existe:', !!mapIntegration.mapInstance)
-              console.log('📍 Google Maps disponível:', !!window.google)
-              
-              if (!mapIntegration.mapInstance) {
-                retryCount++
-                if (retryCount >= maxRetries) {
-                  console.error('❌ Timeout: MapInstance não foi criado após', maxRetries, 'tentativas')
-                  console.error('❌ Possível problema no hook useMapIntegration')
-                  return
-                }
-                console.log('⏳ MapInstance ainda é null, aguardando... (tentativa', retryCount, '/', maxRetries, ')')
-                setTimeout(waitForMapAndAddMarker, 100)
-                return
-              }
-              
-              if (!window.google) {
-                console.error('❌ Google Maps não está disponível!')
-                return
-              }
-              
-              console.log('📍 === ADICIONANDO MARCADOR ===')
-              console.log('📍 MapInstance encontrado após', retryCount, 'tentativas!')
-              mapIntegration.addMarker(locationToUse, markerTitle)
-              console.log('📍 addMarker chamado com sucesso!')
-            }
-            
-            // Iniciar verificação após um pequeno delay
-            setTimeout(waitForMapAndAddMarker, 200)
-            
-            console.log('🗺️ Mapa inicializado com sucesso!')
-          } catch (error) {
-            console.error('❌ Error initializing map:', error)
-          }
+        // Limpar qualquer mapa existente
+        mapIntegration.clearMap();
+        
+        // Inicializar o mapa com a localização
+        const mapInstance = await mapIntegration.initializeMap(mapRef.current, locationToUse);
+        
+        // Verificar se o componente ainda está montado
+        if (!isMounted) return;
+        
+        // Se o mapa foi inicializado com sucesso, adicionar marcador
+        if (mapInstance) {
+          mapIntegration.addMarker(locationToUse, markerTitle);
+          setLastMapLocation(locationToUse);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Erro ao inicializar mapa:', error);
         }
       }
-
-      initializeMap()
-    }, [showMap, mapIntegration.isLoaded, selectedLocation, lastMapLocation, mapIntegration]) // Incluir todas as dependências
+    };
+    
+    // Iniciar configuração do mapa
+    setupMap();
+    
+    // Função de limpeza
+    return () => {
+      isMounted = false;
+      // Não limpar o mapa aqui, apenas marcar o efeito como inativo
+    };
+  }, [showMap, mapIntegration.isLoaded]);
+  
+  // Efeito separado para atualizar o mapa quando a localização muda
+  React.useEffect(() => {
+    // Só executar quando o mapa está visível e temos uma localização selecionada
+    if (!showMap || !mapIntegration.mapInstance || !selectedLocation) {
+      return;
+    }
+    
+    // Verificar se a localização realmente mudou para evitar atualizações desnecessárias
+    if (lastMapLocation && 
+        lastMapLocation.lat === selectedLocation.lat && 
+        lastMapLocation.lng === selectedLocation.lng) {
+      return;
+    }
+    
+    // Atualizar o centro do mapa e o marcador
+    mapIntegration.centerMap(selectedLocation);
+    
+    const markerTitle = 'Localização selecionada';
+    mapIntegration.clearMarker();
+    mapIntegration.addMarker(selectedLocation, markerTitle);
+    
+    // Atualizar última localização
+    setLastMapLocation(selectedLocation);
+  }, [selectedLocation, mapIntegration, showMap, lastMapLocation]);
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value
@@ -301,105 +290,125 @@ const LocationInput = React.forwardRef<LocationInputRef, LocationInputProps>(
 
 
 
+    // Inicializar geolocalização quando o componente é montado
+    React.useEffect(() => {
+      // Verificar se o Google Maps está carregado e se a geolocalização é suportada
+      if (mapIntegration.isLoaded && geolocation.isSupported && !geolocation.coordinates) {
+        // Pré-carregar a geolocalização para que esteja pronta quando o usuário clicar no botão
+        geolocation.getCurrentLocation().catch(error => {
+          // Silenciosamente ignorar erros na inicialização automática
+          console.log('Pré-carregamento de geolocalização falhou:', error);
+        });
+      }
+    }, [mapIntegration.isLoaded, geolocation]);
+
     // Obter localização atual usando o hook
     const handleGetCurrentLocation = React.useCallback(async () => {
       try {
-        await geolocation.getCurrentLocation()
-        
+        // Se já temos coordenadas, usar diretamente para evitar espera desnecessária
         if (geolocation.coordinates) {
-          setSelectedLocation(geolocation.coordinates)
+          setSelectedLocation(geolocation.coordinates);
+        } else {
+          // Caso contrário, obter novas coordenadas
+          await geolocation.getCurrentLocation();
           
-          // Tentar obter endereço próximo usando Places API
-          if (locationSearch.isGoogleMapsReady && window.google) {
-            try {
-              const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary
+          if (!geolocation.coordinates) {
+            throw new Error('Não foi possível obter a localização');
+          }
+          
+          setSelectedLocation(geolocation.coordinates);
+        }
+        
+        // Tentar obter endereço próximo usando Places API
+        if (locationSearch.isGoogleMapsReady && window.google) {
+          try {
+            const { Place } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary;
+            
+            const request = {
+              locationRestriction: {
+                center: geolocation.coordinates,
+                radius: 5000 // 5km de raio
+              },
+              includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1', 'country'],
+              maxResultCount: 10,
+              fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
+            };
+
+            const result = await (Place as unknown as { 
+              searchNearby: (request: unknown) => Promise<SearchNearbyResult> 
+            }).searchNearby(request)
+
+            let address = 'Minha localização atual'
+            const places = result?.places
+
+            if (places && Array.isArray(places) && places.length > 0) {
+              // Procurar por diferentes tipos de localização
+              const locality = places.find((place: GooglePlaceResult) => 
+                place.types?.includes('locality')
+              )
+              const adminLevel1 = places.find((place: GooglePlaceResult) => 
+                place.types?.includes('administrative_area_level_1')
+              )
+              const adminLevel2 = places.find((place: GooglePlaceResult) => 
+                place.types?.includes('administrative_area_level_2')
+              )
+              const country = places.find((place: GooglePlaceResult) => 
+                place.types?.includes('country')
+              )
               
-              const request = {
-                locationRestriction: {
-                  center: geolocation.coordinates,
-                  radius: 5000 // 5km de raio
-                },
-                includedTypes: ['locality', 'administrative_area_level_2', 'administrative_area_level_1', 'country'],
-                maxResultCount: 10,
-                fields: ['displayName', 'formattedAddress', 'location', 'id', 'types']
+              // Montar endereço no formato "Cidade, Estado, País"
+              const addressParts = []
+              
+              if (locality) {
+                addressParts.push(locality.displayName)
+              } else if (adminLevel2) {
+                addressParts.push(adminLevel2.displayName)
               }
-
-              const result = await (Place as unknown as { 
-                searchNearby: (request: unknown) => Promise<SearchNearbyResult> 
-              }).searchNearby(request)
-
-              let address = 'Minha localização atual'
-              const places = result?.places
-
-              if (places && Array.isArray(places) && places.length > 0) {
-                // Procurar por diferentes tipos de localização
-                const locality = places.find((place: GooglePlaceResult) => 
-                  place.types?.includes('locality')
-                )
-                const adminLevel1 = places.find((place: GooglePlaceResult) => 
-                  place.types?.includes('administrative_area_level_1')
-                )
-                const adminLevel2 = places.find((place: GooglePlaceResult) => 
-                  place.types?.includes('administrative_area_level_2')
-                )
-                const country = places.find((place: GooglePlaceResult) => 
-                  place.types?.includes('country')
-                )
-                
-                // Montar endereço no formato "Cidade, Estado, País"
-                const addressParts = []
-                
-                if (locality) {
-                  addressParts.push(locality.displayName)
-                } else if (adminLevel2) {
-                  addressParts.push(adminLevel2.displayName)
-                }
-                
-                if (adminLevel1) {
-                  addressParts.push(adminLevel1.displayName)
-                }
-                
-                if (country) {
-                  addressParts.push(country.displayName)
-                }
-                
-                if (addressParts.length > 0) {
-                  address = addressParts.join(', ')
-                } else {
-                  // Usar o primeiro resultado disponível como fallback
-                  const firstPlace = places[0] as { formattedAddress?: string; displayName?: string }
-                  address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
-                }
+              
+              if (adminLevel1) {
+                addressParts.push(adminLevel1.displayName)
               }
-
-              setInputValue(address)
-              onChange(address)
-            } catch (error) {
-              console.error('Error with Places API searchNearby:', error)
-              const address = 'Minha localização atual'
-              setInputValue(address)
-              onChange(address)
+              
+              if (country) {
+                addressParts.push(country.displayName)
+              }
+              
+              if (addressParts.length > 0) {
+                address = addressParts.join(', ')
+              } else {
+                // Usar o primeiro resultado disponível como fallback
+                const firstPlace = places[0] as { formattedAddress?: string; displayName?: string }
+                address = firstPlace.displayName || firstPlace.formattedAddress || 'Minha localização atual'
+              }
             }
-          } else {
+
+            setInputValue(address)
+            onChange(address)
+          } catch (error) {
+            console.error('Error with Places API searchNearby:', error)
             const address = 'Minha localização atual'
             setInputValue(address)
             onChange(address)
           }
-          
-          // Abrir mapa automaticamente se estiver em modo automático
-          if (autoShowMap) {
-            setShowMap(true)
+        } else {
+          const address = 'Minha localização atual'
+          setInputValue(address)
+          onChange(address)
+        }
+        
+        // Abrir mapa automaticamente se estiver em modo automático
+        if (autoShowMap) {
+          setShowMap(true)
+        }
+        
+        // Inicializar ou atualizar mapa
+        if (mapRef.current) {
+          if (!mapIntegration.mapInstance) {
+            await mapIntegration.initializeMap(mapRef.current, geolocation.coordinates)
+          } else {
+            mapIntegration.centerMap(geolocation.coordinates)
           }
-          
-          // Inicializar ou atualizar mapa
-          if (mapRef.current) {
-            if (!mapIntegration.mapInstance) {
-              await mapIntegration.initializeMap(mapRef.current, geolocation.coordinates)
-            } else {
-              mapIntegration.centerMap(geolocation.coordinates)
-            }
-            mapIntegration.addMarker(geolocation.coordinates, 'Minha localização')
-          }
+          mapIntegration.addMarker(geolocation.coordinates, 'Minha localização')
         }
       } catch (error) {
         console.error('Error getting location:', error)

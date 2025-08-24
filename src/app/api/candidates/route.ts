@@ -1,21 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
-import {validateFormData} from "@/lib/utils/validation";
-import {getClientIP} from "@/lib/utils/ip";
-import {checkEmailExists} from "@/lib/database/checkEmail";
-import {insertOrUpdateCandidate} from "@/app/api/services/candidate";
+import { NextResponse } from 'next/server';
+import { validateFormData, validateFormDataWithErrors } from "@/lib/utils/validation";
+import { getClientIP } from "@/lib/utils/ip";
+import { checkEmailExists } from "@/lib/database/checkEmail";
+import { insertOrUpdateCandidate } from "@/app/api/services/candidate";
+import { headers } from 'next/headers';
 
-
-export async function POST(request: NextRequest) {
+// Route Handler moderno com tipagem melhorada
+export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    if (!validateFormData(body)) {
-      return NextResponse.json({ error: 'Dados inválidos fornecidos' }, { status: 400 });
+    // Validação com feedback de erros detalhados
+    const validation = validateFormDataWithErrors(body);
+    if (!validation.isValid) {
+      return NextResponse.json({ 
+        error: 'Dados inválidos fornecidos',
+        validation_errors: validation.errors
+      }, { status: 400 });
     }
 
     const formData = body;
-    const clientIP = getClientIP(request);
-    const userAgent = request.headers.get('user-agent') || 'unknown';
+    
+    // Usar headers() API para obter cabeçalhos da requisição
+    const headersList = headers();
+    const userAgent = headersList.get('user-agent') || 'unknown';
+    
+    // Obter IP do cliente (em ambiente de desenvolvimento, usar um valor padrão)
+    const clientIP = process.env.NODE_ENV === 'development' ? '127.0.0.1' : getClientIP();
 
     const existingCandidate = await checkEmailExists(formData.email);
 
@@ -90,17 +101,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function PUT(request: Request) {
   try {
     const body = await request.json();
 
-    if (!validateFormData(body)) {
-      return NextResponse.json({ error: 'Dados inválidos fornecidos' }, { status: 400 });
+    // Validação com feedback de erros detalhados
+    const validation = validateFormDataWithErrors(body);
+    if (!validation.isValid) {
+      return NextResponse.json({ 
+        error: 'Dados inválidos fornecidos',
+        validation_errors: validation.errors
+      }, { status: 400 });
     }
 
     const formData = body;
-    const clientIP = getClientIP(request);
-    const userAgent = request.headers.get('user-agent') || 'unknown';
+    
+    // Usar headers() API para obter cabeçalhos da requisição
+    const headersList = headers();
+    const userAgent = headersList.get('user-agent') || 'unknown';
+    
+    // Obter IP do cliente (em ambiente de desenvolvimento, usar um valor padrão)
+    const clientIP = process.env.NODE_ENV === 'development' ? '127.0.0.1' : getClientIP();
 
     const existingCandidate = await checkEmailExists(formData.email);
 
@@ -149,3 +170,49 @@ export async function PUT(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+// Adicionar método GET para listar candidatos
+export async function GET(request: Request) {
+  try {
+    // Obter parâmetros de consulta
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const search = searchParams.get('search') || '';
+    
+    // Aqui você implementaria a lógica para buscar candidatos no banco de dados
+    // Por exemplo: await db.candidates.findMany({ 
+    //   where: { nome: { contains: search } },
+    //   take: limit, 
+    //   skip: offset 
+    // })
+    
+    // Retorno simulado para demonstração
+    const candidates = Array.from({ length: limit }, (_, i) => ({
+      id: i + offset + 1,
+      nome: `Candidato ${i + offset + 1}${search ? ` (${search})` : ''}`,
+      email: `candidato${i + offset + 1}@exemplo.com`,
+      cargo: 'Desenvolvedor',
+      created_at: new Date().toISOString()
+    }));
+    
+    return NextResponse.json({
+      success: true,
+      data: candidates,
+      pagination: {
+        total: 100, // Total simulado
+        limit,
+        offset,
+        hasMore: offset + limit < 100
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao listar candidatos:', error);
+    
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}
+
