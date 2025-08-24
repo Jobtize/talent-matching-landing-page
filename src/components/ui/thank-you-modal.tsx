@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { track } from '@vercel/analytics'
-import { X, CheckCircle, MessageCircle, UserPlus, Linkedin } from 'lucide-react'
+import { X, CheckCircle, MessageCircle, Linkedin } from 'lucide-react'
 import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -66,20 +66,7 @@ export function ThankYouModal({
     window.open(whatsappUrl, '_blank')
   }
 
-  const handleCompleteRegistration = () => {
-    // Tracking do clique em completar cadastro
-    track('complete_registration_click', {
-      source: 'thank_you_modal'
-    })
-    
-    // Tracking do Google Analytics
-    sendEvent('complete_registration_click', {
-      source: 'thank_you_modal'
-    })
-    
-    // Redirecionar para a página de cadastro
-    router.push('/cadastro')
-  }
+  // Função removida: handleCompleteRegistration
 
   const handleLinkedInLogin = () => {
     // Tracking do clique em login com LinkedIn
@@ -134,24 +121,11 @@ export function ThankYouModal({
             </p>
 
             <p className="text-sm text-gray-500 mb-8 animate-in slide-in-from-bottom-4 duration-500 delay-400">
-              Para finalizar e ter acesso às vagas exclusivas, crie sua conta ou faça login com LinkedIn.
+              Para finalizar e ter acesso às vagas exclusivas, faça login com LinkedIn.
             </p>
 
-            {/* Opções de Cadastro/Login */}
+            {/* Opções de Login */}
             <div className="space-y-4 mb-6 animate-in slide-in-from-bottom-4 duration-500 delay-500">
-              {/* Botão de Completar Cadastro */}
-              <Button
-                onClick={handleCompleteRegistration}
-                className={cn(
-                  "w-full bg-blue-600 hover:bg-blue-700",
-                  "text-white font-semibold py-3 px-6 rounded-md transition-all duration-300",
-                  "shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                )}
-              >
-                <UserPlus className="w-5 h-5 mr-2" />
-                Completar Meu Perfil Agora
-              </Button>
-
               {/* Botão de Login com LinkedIn */}
               <Button
                 onClick={handleLinkedInLogin}
