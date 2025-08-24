@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { track } from '@vercel/analytics'
+import { useFormStorage } from '@/hooks/useFormStorage'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/phone-input'
@@ -10,7 +11,10 @@ import { TagInput } from '@/components/ui/tag-input'
 import { JobtizeLogo } from '@/components/ui/jobtize-logo'
 import PdfUpload, { ValidatedFile, PdfUploadRef } from '@/components/ui/pdf-upload'
 import { ThankYouModal } from '@/components/ui/thank-you-modal'
+import { GoogleButton } from '@/components/ui/google-button'
 import ClientOnly from '@/components/ClientOnly'
+import { useRouter } from 'next/navigation'
+import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics'
 import { 
   Briefcase, 
   TrendingUp, 
@@ -23,7 +27,8 @@ import {
   Loader2,
   AlertCircle,
   Download,
-  FileText
+  FileText,
+  Linkedin
 } from 'lucide-react'
 
 interface FormData {
@@ -72,6 +77,9 @@ interface PendingFormData {
 }
 
 export default function JobtizeLanding() {
+  const router = useRouter()
+  const { sendEvent } = useGoogleAnalytics()
+  
   const [formData, setFormData] = useState<FormData>({
     nome: '',
     email: '',
@@ -83,6 +91,9 @@ export default function JobtizeLanding() {
     tecnologias: [],
     curriculo: null
   })
+  
+  // Hook para armazenar dados do formulário para uso posterior
+  const { saveFormData } = useFormStorage()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -404,6 +415,18 @@ export default function JobtizeLanding() {
         }
       }
       
+      // Salvar dados do formulário para uso posterior no cadastro
+      saveFormData({
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        cargo: formData.cargo,
+        experiencia: formData.experiencia,
+        localizacao: formData.localizacao,
+        areas: formData.areas,
+        tecnologias: formData.tecnologias
+      })
+      
       // Tracking de conversão
       track('form_submission', {
         type: 'new_candidate',
@@ -484,7 +507,31 @@ export default function JobtizeLanding() {
                 Pare de procurar emprego. Nossa plataforma inteligente conecta você às melhores 
                 oportunidades baseadas no seu perfil profissional.
               </p>
-
+              
+              <div className="flex flex-col space-y-3">
+                <Button
+                  onClick={() => {
+                    // Tracking do clique em login com LinkedIn
+                    track('linkedin_login_click', {
+                      source: 'landing_page'
+                    })
+                    
+                    // Tracking do Google Analytics
+                    sendEvent('linkedin_login_click', {
+                      source: 'landing_page'
+                    })
+                    
+                    // Redirecionar para a autenticação do LinkedIn
+                    router.push('/api/auth/linkedin')
+                  }}
+                  className="flex items-center space-x-2 bg-[#0077B5] hover:bg-[#006097] text-white px-6 py-3 rounded-md font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                >
+                  <Linkedin className="w-5 h-5" />
+                  <span>Entrar com LinkedIn</span>
+                </Button>
+                
+                <GoogleButton />
+              </div>
             </div>
 
             {/* Formulário */}
@@ -623,7 +670,7 @@ export default function JobtizeLanding() {
                 {/* Campo de Currículo */}
                 {/* Upload de PDF */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-500">
                     📄 Currículo (PDF) - Opcional
                   </label>
                   <PdfUpload
