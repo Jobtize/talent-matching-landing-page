@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { cookies } from 'next/headers'
+import { randomBytes } from 'crypto'
 
 // Função para criar URL de autenticação do LinkedIn diretamente
 function createLinkedInAuthUrl(callbackUrl: string) {
@@ -14,9 +16,24 @@ function createLinkedInAuthUrl(callbackUrl: string) {
   // Simplificar o escopo para evitar problemas
   const scope = encodeURIComponent('openid profile email');
   
-  // Criar um state simples para evitar problemas de parsing
-  const stateObj = { cb: callbackUrl, ts: Date.now() };
+  // Gerar um state aleatório para segurança
+  const stateValue = randomBytes(32).toString('hex');
+  
+  // Criar um objeto state com callbackUrl e timestamp
+  const stateObj = { cb: callbackUrl, ts: Date.now(), value: stateValue };
   const state = encodeURIComponent(JSON.stringify(stateObj));
+  
+  // Armazenar o state em um cookie para verificação posterior
+  const cookieStore = cookies();
+  cookieStore.set('linkedin_oauth_state', stateValue, {
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 15, // 15 minutos
+    sameSite: 'lax'
+  });
+  
+  console.log("State gerado e armazenado em cookie:", stateValue.substring(0, 10) + "...");
   
   return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
 }

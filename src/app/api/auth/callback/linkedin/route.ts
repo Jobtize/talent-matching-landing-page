@@ -60,12 +60,33 @@ export async function GET(request: NextRequest) {
       url: request.nextUrl.toString()
     });
     
+    // Verificar se o state é válido
+    const cookieStore = cookies();
+    const storedState = cookieStore.get('linkedin_oauth_state')?.value;
+    console.log("Estado armazenado em cookie:", storedState ? storedState.substring(0, 10) + "..." : "null");
+    
+    let stateVerified = false;
+    let stateData: any = null;
+    
     // Extrair callbackUrl do state, se disponível
     let callbackUrl = '/profile';
     if (state) {
       try {
-        const stateData = JSON.parse(decodeURIComponent(state));
-        // Verificar o formato do state (novo ou antigo)
+        stateData = JSON.parse(decodeURIComponent(state));
+        console.log("State decodificado:", JSON.stringify(stateData).substring(0, 100) + "...");
+        
+        // Verificar se o state é válido comparando com o valor armazenado no cookie
+        if (storedState && stateData.value && stateData.value === storedState) {
+          console.log("State verificado com sucesso!");
+          stateVerified = true;
+        } else {
+          console.warn("Verificação de state falhou:", {
+            storedState: storedState ? storedState.substring(0, 10) + "..." : "null",
+            receivedState: stateData.value ? stateData.value.substring(0, 10) + "..." : "null"
+          });
+        }
+        
+        // Extrair callbackUrl do state (formato novo ou antigo)
         if (stateData.callbackUrl) {
           callbackUrl = stateData.callbackUrl;
           console.log("CallbackUrl extraído do state (formato antigo):", callbackUrl);
@@ -88,6 +109,14 @@ export async function GET(request: NextRequest) {
         }
       }
     }
+    
+    // Limpar o cookie de state após a verificação
+    cookieStore.set('linkedin_oauth_state', '', { 
+      path: '/', 
+      maxAge: 0,
+      expires: new Date(0)
+    });
+    console.log("Cookie de state limpo");
     
     if (code) {
       console.log("Código de autorização recebido do LinkedIn:", code.substring(0, 10) + "...");
