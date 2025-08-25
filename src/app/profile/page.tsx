@@ -18,6 +18,8 @@ export default function ProfilePage() {
     availability: 'full-time',
     remotePreference: 'hybrid',
   });
+  const [linkedInData, setLinkedInData] = useState<any>(null);
+  const [isLoadingLinkedInData, setIsLoadingLinkedInData] = useState(false);
   
   // Calcular completude do perfil
   const profileFields = Object.keys(profileData).length;
@@ -28,14 +30,40 @@ export default function ProfilePage() {
   
   const profileCompletion = Math.round((filledFields / profileFields) * 100);
   
+  // Buscar dados detalhados do LinkedIn
+  const fetchLinkedInData = async () => {
+    if (!session?.user?.accessToken) return;
+    
+    try {
+      setIsLoadingLinkedInData(true);
+      const response = await fetch('/api/linkedin/profile');
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Dados do LinkedIn:', data);
+        setLinkedInData(data);
+      } else {
+        console.error('Erro ao buscar dados do LinkedIn:', await response.text());
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados do LinkedIn:', error);
+    } finally {
+      setIsLoadingLinkedInData(false);
+    }
+  };
+  
   // Preencher dados do perfil com informações do usuário quando disponíveis
   useEffect(() => {
     if (session?.user) {
       setProfileData(prevData => ({
         ...prevData,
         name: session.user.name || prevData.name,
-        // Outros campos que podem vir da sessão
+        jobTitle: session.user.headline || prevData.jobTitle,
+        location: session.user.location || prevData.location,
       }));
+      
+      // Buscar dados adicionais do LinkedIn
+      fetchLinkedInData();
     }
   }, [session]);
   
@@ -101,7 +129,53 @@ export default function ProfilePage() {
             </div>
             <div className="flex-grow">
               <h2 className="text-2xl font-bold">{profileData.name || session?.user?.name || 'Seu Nome'}</h2>
-              <p className="text-gray-600">{profileData.jobTitle || 'Engenheiro de Software Sênior'}</p>
+              <p className="text-gray-600">{profileData.jobTitle || session?.user?.headline || 'Profissional'}</p>
+              
+              {/* Informações do LinkedIn */}
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                {session?.user?.location && (
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {session.user.location}
+                  </div>
+                )}
+                
+                {session?.user?.industry && (
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    {session.user.industry}
+                  </div>
+                )}
+                
+                {session?.user?.connections !== undefined && (
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    {session.user.connections} conexões
+                  </div>
+                )}
+                
+                {session?.user?.profileUrl && (
+                  <a 
+                    href={session.user.profileUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center text-blue-500 hover:text-blue-700"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Perfil LinkedIn
+                  </a>
+                )}
+              </div>
+              
               <div className="mt-2">
                 <div className="flex items-center">
                   <span className="text-sm text-gray-500 mr-2">Perfil Completo:</span>
@@ -114,6 +188,12 @@ export default function ProfilePage() {
                   <span className="text-sm text-gray-500 ml-2">{profileCompletion}%</span>
                 </div>
               </div>
+              
+              {isLoadingLinkedInData && (
+                <div className="mt-2 text-sm text-gray-500">
+                  <span className="inline-block animate-pulse">Carregando dados do LinkedIn...</span>
+                </div>
+              )}
             </div>
             <div className="mt-4 md:mt-0">
               <label className="inline-flex items-center cursor-pointer">
@@ -275,4 +355,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

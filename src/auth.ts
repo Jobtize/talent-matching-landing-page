@@ -13,9 +13,15 @@ export const {
       clientId: process.env.LINKEDIN_CLIENT_ID!,
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
       authorization: {
-        params: { scope: "openid profile email" },
+        params: { 
+          scope: "openid profile email r_liteprofile r_emailaddress r_network" 
+        },
+      },
+      userinfo: {
+        url: "https://api.linkedin.com/v2/userinfo",
       },
       profile(profile) {
+        console.log("LinkedIn profile data:", JSON.stringify(profile, null, 2));
         return {
           id: profile.sub,
           name: profile.name,
@@ -23,6 +29,10 @@ export const {
           image: profile.picture,
           firstName: profile.given_name,
           lastName: profile.family_name,
+          headline: profile.headline || '',
+          profileUrl: profile.profileUrl || '',
+          industry: profile.industry || '',
+          location: profile.locale || '',
         };
       },
     }),
@@ -33,11 +43,63 @@ export const {
       if (account) {
         token.accessToken = account.access_token;
         token.expiresAt = account.expires_at;
+        
+        // Buscar informações adicionais do LinkedIn se tivermos um token de acesso
+        if (account.access_token) {
+          try {
+            // Buscar dados do usuário da API do LinkedIn
+            const userInfoResponse = await fetch("https://api.linkedin.com/v2/userinfo", {
+              headers: {
+                Authorization: `Bearer ${account.access_token}`,
+              },
+            });
+            
+            if (userInfoResponse.ok) {
+              const userInfo = await userInfoResponse.json();
+              console.log("LinkedIn userInfo API response:", JSON.stringify(userInfo, null, 2));
+              
+              // Adicionar dados adicionais ao token
+              token.headline = userInfo.headline || '';
+              token.industry = userInfo.industry || '';
+              token.profileUrl = userInfo.profileUrl || '';
+              
+              // Buscar conexões se tivermos o ID da pessoa
+              if (userInfo.sub) {
+                try {
+                  const connectionsResponse = await fetch(
+                    `https://api.linkedin.com/v2/connections/urn:li:person:${userInfo.sub}`, {
+                      headers: {
+                        Authorization: `Bearer ${account.access_token}`,
+                      },
+                    }
+                  );
+                  
+                  if (connectionsResponse.ok) {
+                    const connectionsData = await connectionsResponse.json();
+                    console.log("LinkedIn connections API response:", JSON.stringify(connectionsData, null, 2));
+                    token.connections = connectionsData.connections?.total || 0;
+                  } else {
+                    console.error("Erro ao buscar conexões do LinkedIn:", await connectionsResponse.text());
+                  }
+                } catch (error) {
+                  console.error("Erro ao buscar conexões do LinkedIn:", error);
+                }
+              }
+            } else {
+              console.error("Erro ao buscar dados do usuário do LinkedIn:", await userInfoResponse.text());
+            }
+          } catch (error) {
+            console.error("Erro ao buscar dados adicionais do LinkedIn:", error);
+          }
+        }
       }
       
       if (profile) {
         token.firstName = profile.given_name;
         token.lastName = profile.family_name;
+        token.headline = profile.headline || token.headline;
+        token.industry = profile.industry || token.industry;
+        token.profileUrl = profile.profileUrl || token.profileUrl;
       }
       
       return token;
@@ -49,6 +111,10 @@ export const {
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
         session.user.accessToken = token.accessToken as string;
+        session.user.headline = token.headline as string;
+        session.user.industry = token.industry as string;
+        session.user.profileUrl = token.profileUrl as string;
+        session.user.connections = token.connections as number;
       }
       
       return session;
@@ -92,4 +158,3 @@ export async function getCurrentUser() {
   const session = await getAuthSession();
   return session?.user;
 }
-
