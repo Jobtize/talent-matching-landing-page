@@ -150,6 +150,14 @@ export const {
     signOut: "/",
     error: "/auth/error",
   },
+  events: {
+    async signIn({ user, account, profile, isNewUser }) {
+      console.log("Evento de signIn:", { user, account, isNewUser });
+    },
+    async session({ session, token }) {
+      console.log("Evento de session:", { session });
+    },
+  },
   session: {
     strategy: "jwt",
     maxAge: 60 * 60 * 24 * 7, // 7 dias

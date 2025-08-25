@@ -80,9 +80,17 @@ export function ThankYouModal({
     })
     
     try {
-      // Usar signIn do NextAuth em vez de redirecionamento direto
+      // Usar signIn do NextAuth com redirecionamento forçado para /profile
       const { signIn } = await import('next-auth/react')
-      await signIn('linkedin', { callbackUrl: '/profile' })
+      
+      // Usar redirecionamento forçado para /profile
+      window.sessionStorage.setItem('nextauth_callback', '/profile')
+      
+      // Chamar signIn com redirecionamento
+      await signIn('linkedin', { 
+        callbackUrl: '/profile',
+        redirect: true
+      })
     } catch (error) {
       console.error('Erro ao fazer login com LinkedIn:', error)
       // Fallback para redirecionamento direto em caso de erro

@@ -6,7 +6,20 @@ import LogoutButton from '@/components/LogoutButton';
 import Image from 'next/image';
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      // Redirecionar para a página inicial se não estiver autenticado
+      window.location.href = '/';
+    },
+  });
+  
+  // Log para depuração
+  useEffect(() => {
+    console.log('Status da sessão na página de perfil:', status);
+    console.log('Dados da sessão:', session);
+  }, [session, status]);
+  
   const [profileData, setProfileData] = useState({
     name: '',
     jobTitle: '',
@@ -86,11 +99,7 @@ export default function ProfilePage() {
   
   // Verificar se o usuário está autenticado
   if (status === 'unauthenticated') {
-    // Redirecionar para a página inicial se não estiver autenticado
-    useEffect(() => {
-      window.location.href = '/';
-    }, []);
-    
+    // Já estamos redirecionando no useSession, mas mantemos isso como fallback
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <p className="text-gray-600">Redirecionando para a página inicial...</p>
