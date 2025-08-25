@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 
+// Função auxiliar para criar uma resposta de redirecionamento
+function createProfileRedirect() {
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
+  console.log("Criando redirecionamento direto para /profile");
+  return NextResponse.redirect(`${baseUrl}/profile`, { status: 302 });
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Verificar se há um código de autorização na URL
@@ -30,24 +37,37 @@ export async function GET(request: NextRequest) {
           // Se o redirecionamento não for para /profile, forçar redirecionamento para /profile
           if (redirectUrl && !redirectUrl.includes('/profile')) {
             console.log("Forçando redirecionamento para /profile");
-            const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
-            return NextResponse.redirect(`${baseUrl}/profile`);
+            return createProfileRedirect();
           }
+        }
+        
+        // Se a resposta não for um redirecionamento, forçar redirecionamento para /profile
+        if (!(response instanceof Response) || response.status < 300 || response.status >= 400) {
+          console.log("Resposta não é um redirecionamento, forçando redirecionamento para /profile");
+          return createProfileRedirect();
         }
         
         return response;
       } catch (authError: any) {
         console.error("Erro ao processar autenticação:", authError);
         
-        // Se o erro for um redirecionamento do NextAuth, permitir que continue
+        // Se o erro for um redirecionamento do NextAuth, verificar se é para /profile
         if (authError.message === 'NEXT_REDIRECT') {
-          console.log("Redirecionamento do NextAuth detectado, permitindo continuar");
+          console.log("Redirecionamento do NextAuth detectado:", authError.digest);
+          
+          // Se o redirecionamento não for para /profile, forçar redirecionamento para /profile
+          if (!authError.digest.includes('/profile')) {
+            console.log("Redirecionamento não é para /profile, forçando redirecionamento");
+            return createProfileRedirect();
+          }
+          
+          console.log("Permitindo redirecionamento do NextAuth continuar");
           throw authError; // Deixar o NextAuth lidar com o redirecionamento
         }
         
-        // Outros erros, redirecionar para página inicial
-        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
-        return NextResponse.redirect(`${baseUrl}/?error=auth_process_error`);
+        // Outros erros, redirecionar para /profile de qualquer forma
+        console.log("Erro não é um redirecionamento, forçando redirecionamento para /profile");
+        return createProfileRedirect();
       }
     } else {
       console.error("Nenhum código de autorização recebido do LinkedIn");
@@ -59,14 +79,22 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error("Erro no callback do LinkedIn:", error);
     
-    // Se o erro for um redirecionamento do NextAuth, permitir que continue
+    // Se o erro for um redirecionamento do NextAuth, verificar se é para /profile
     if (error.message === 'NEXT_REDIRECT') {
-      console.log("Redirecionamento do NextAuth detectado, permitindo continuar");
+      console.log("Redirecionamento do NextAuth detectado:", error.digest);
+      
+      // Se o redirecionamento não for para /profile, forçar redirecionamento para /profile
+      if (!error.digest.includes('/profile')) {
+        console.log("Redirecionamento não é para /profile, forçando redirecionamento");
+        return createProfileRedirect();
+      }
+      
+      console.log("Permitindo redirecionamento do NextAuth continuar");
       throw error; // Deixar o NextAuth lidar com o redirecionamento
     }
     
-    // Em caso de outros erros, redirecionar para a página inicial
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
-    return NextResponse.redirect(`${baseUrl}/?error=auth_callback_error`);
+    // Em caso de outros erros, redirecionar para /profile de qualquer forma
+    console.log("Erro não é um redirecionamento, forçando redirecionamento para /profile");
+    return createProfileRedirect();
   }
 }
