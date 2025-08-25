@@ -10,6 +10,7 @@ export default function ProfilePage() {
     required: true,
     onUnauthenticated() {
       // Redirecionar para a página inicial se não estiver autenticado
+      console.log('Usuário não autenticado na página de perfil, redirecionando para /');
       window.location.href = '/';
     },
   });
@@ -18,6 +19,16 @@ export default function ProfilePage() {
   useEffect(() => {
     console.log('Status da sessão na página de perfil:', status);
     console.log('Dados da sessão:', session);
+    
+    // Verificar se a sessão está carregando ou se o usuário está autenticado
+    if (status === 'loading') {
+      console.log('Carregando sessão na página de perfil...');
+    } else if (status === 'authenticated' && session) {
+      console.log('Usuário autenticado na página de perfil:', {
+        name: session.user?.name,
+        email: session.user?.email
+      });
+    }
   }, [session, status]);
   
   const [profileData, setProfileData] = useState({
