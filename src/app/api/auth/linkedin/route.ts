@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     return await signIn('linkedin', { redirectTo: '/profile' })
   } catch (error) {
     console.error('LinkedIn auth error:', error);
-    return NextResponse.redirect('/?error=auth_init_failed');
+    // Usar URL absoluta para redirecionamento
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
+    return NextResponse.redirect(`${baseUrl}/?error=auth_init_failed`);
   }
 }
