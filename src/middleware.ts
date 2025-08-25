@@ -24,12 +24,24 @@ export async function middleware(request: NextRequest) {
   // Verificar autenticação
   const session = await auth();
   
+  console.log("Middleware verificando sessão para rota protegida:", {
+    pathname,
+    hasSession: !!session,
+    sessionData: session ? 'Sessão existe' : 'Sem sessão'
+  });
+  
   // Se não estiver autenticado e for uma rota protegida, redirecionar para a página inicial
-  // sem adicionar parâmetros de consulta
   if (!session && isProtectedRoute) {
-    // Redirecionar diretamente para a página inicial sem parâmetros de consulta
-    return NextResponse.redirect(new URL('/', request.url));
+    console.log("Middleware: Usuário não autenticado tentando acessar rota protegida. Redirecionando para /");
+    
+    // Armazenar a URL que o usuário estava tentando acessar
+    const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
+    
+    // Redirecionar para a página inicial com parâmetro de redirecionamento
+    return NextResponse.redirect(new URL(`/?callbackUrl=${callbackUrl}`, request.url));
   }
+  
+  console.log("Middleware: Usuário autenticado acessando rota protegida. Permitindo acesso.");
   
   // Permitir acesso se estiver autenticado
   return NextResponse.next();

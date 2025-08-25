@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { track } from '@vercel/analytics'
 import { useFormStorage } from '@/hooks/useFormStorage'
 import { Button } from '@/components/ui/button'
@@ -12,8 +12,9 @@ import { JobtizeLogo } from '@/components/ui/jobtize-logo'
 import PdfUpload, { ValidatedFile, PdfUploadRef } from '@/components/ui/pdf-upload'
 import { ThankYouModal } from '@/components/ui/thank-you-modal'
 import ClientOnly from '@/components/ClientOnly'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useGoogleAnalytics } from '@/hooks/useGoogleAnalytics'
+import { useSession } from 'next-auth/react'
 import { 
   Briefcase, 
   TrendingUp, 
@@ -77,7 +78,36 @@ interface PendingFormData {
 
 export default function JobtizeLanding() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { data: session, status } = useSession()
   const { sendEvent } = useGoogleAnalytics()
+  
+  // Verificar se há uma sessão ativa e um callbackUrl
+  useEffect(() => {
+    // Se o usuário estiver autenticado e houver um callbackUrl, redirecionar
+    if (status === 'authenticated' && session) {
+      const callbackUrl = searchParams.get('callbackUrl')
+      
+      console.log('Página inicial: Usuário autenticado', { 
+        session: 'Sessão ativa', 
+        callbackUrl 
+      })
+      
+      // Se houver um callbackUrl, redirecionar para ele
+      if (callbackUrl) {
+        console.log('Redirecionando para:', callbackUrl)
+        router.push(callbackUrl)
+      } else if (session) {
+        // Se não houver callbackUrl mas o usuário estiver autenticado, redirecionar para /profile
+        console.log('Redirecionando para /profile (padrão)')
+        router.push('/profile')
+      }
+    } else if (status === 'loading') {
+      console.log('Verificando sessão...')
+    } else {
+      console.log('Usuário não autenticado na página inicial')
+    }
+  }, [session, status, searchParams, router])
   
   const [formData, setFormData] = useState<FormData>({
     nome: '',
