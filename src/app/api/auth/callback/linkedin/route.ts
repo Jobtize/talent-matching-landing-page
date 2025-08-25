@@ -37,12 +37,27 @@ export async function GET(request: NextRequest) {
     if (state) {
       try {
         const stateData = JSON.parse(decodeURIComponent(state));
+        // Verificar o formato do state (novo ou antigo)
         if (stateData.callbackUrl) {
           callbackUrl = stateData.callbackUrl;
-          console.log("CallbackUrl extraído do state:", callbackUrl);
+          console.log("CallbackUrl extraído do state (formato antigo):", callbackUrl);
+        } else if (stateData.cb) {
+          callbackUrl = stateData.cb;
+          console.log("CallbackUrl extraído do state (formato novo):", callbackUrl);
         }
       } catch (e) {
         console.error("Erro ao parsear state:", e);
+        // Tentar extrair o callbackUrl de outra forma
+        try {
+          // Algumas vezes o state pode estar em um formato diferente
+          const stateStr = decodeURIComponent(state);
+          if (stateStr.includes('profile')) {
+            callbackUrl = '/profile';
+            console.log("CallbackUrl definido como /profile com base no conteúdo do state");
+          }
+        } catch (e2) {
+          console.error("Erro ao tentar extrair callbackUrl alternativo:", e2);
+        }
       }
     }
     

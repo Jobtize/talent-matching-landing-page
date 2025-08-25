@@ -5,9 +5,18 @@ import { auth } from '@/auth'
 function createLinkedInAuthUrl(callbackUrl: string) {
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
   const clientId = process.env.LINKEDIN_CLIENT_ID;
-  const redirectUri = encodeURIComponent(`${baseUrl}/api/auth/callback/linkedin`);
-  const scope = encodeURIComponent('openid profile email r_1st_connections_size r_basicprofile');
-  const state = encodeURIComponent(JSON.stringify({ callbackUrl }));
+  
+  // Usar a URL de redirecionamento configurada nas variáveis de ambiente, se disponível
+  const configuredRedirectUri = process.env.LINKEDIN_REDIRECT_URI;
+  const redirectUri = configuredRedirectUri || 
+    encodeURIComponent(`${baseUrl}/api/auth/callback/linkedin`);
+  
+  // Simplificar o escopo para evitar problemas
+  const scope = encodeURIComponent('openid profile email');
+  
+  // Criar um state simples para evitar problemas de parsing
+  const stateObj = { cb: callbackUrl, ts: Date.now() };
+  const state = encodeURIComponent(JSON.stringify(stateObj));
   
   return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
 }
