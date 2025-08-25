@@ -98,8 +98,8 @@ export async function GET(request: NextRequest) {
       name: 'auth_token',
       value: token,
       httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production', // Apenas secure em produção
+      sameSite: 'lax', // Alterado para lax para permitir o redirect do LinkedIn
       path: '/',
       maxAge: Math.min(Number(expires_in ?? 3600), 60 * 60 * 24 * 7), // cap em 7d
     });
@@ -109,8 +109,8 @@ export async function GET(request: NextRequest) {
       name: 'linkedin_oauth_state',
       value: '',
       httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production', // Apenas secure em produção
+      sameSite: 'lax', // Alterado para lax para permitir o redirect do LinkedIn
       path: '/',
       maxAge: 0,
     });
@@ -124,4 +124,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${SITE_URL}/?error=internal_auth_error`);
   }
 }
-

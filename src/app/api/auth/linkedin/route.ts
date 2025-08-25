@@ -31,13 +31,13 @@ export async function GET(request: NextRequest) {
     // Redirecionar para LinkedIn com cookie de state
     const response = NextResponse.redirect(authUrl.toString());
     
-    // Definir cookie de state (curto, httpOnly, strict)
+    // Definir cookie de state (curto, httpOnly, lax)
     response.cookies.set({
       name: 'linkedin_oauth_state',
       value: state,
       httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production', // Apenas secure em produção
+      sameSite: 'lax', // Alterado para lax para permitir o redirect do LinkedIn
       path: '/',
       maxAge: 60 * 15, // 15 minutos
     });
@@ -48,4 +48,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${SITE_URL}/?error=auth_init_failed`);
   }
 }
-
