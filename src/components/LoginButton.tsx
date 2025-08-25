@@ -14,9 +14,19 @@ export default function LoginButton({ className = '', text = 'Entrar com LinkedI
   const handleLogin = async () => {
     try {
       setIsLoading(true);
-      await signIn('linkedin', { callbackUrl: '/profile' });
+      
+      // Armazenar URL de callback no sessionStorage para garantir redirecionamento
+      window.sessionStorage.setItem('nextauth_callback', '/profile');
+      
+      // Usar redirecionamento explícito
+      await signIn('linkedin', { 
+        callbackUrl: '/profile',
+        redirect: true
+      });
     } catch (error) {
       console.error('Erro ao fazer login:', error);
+      // Fallback para redirecionamento direto em caso de erro
+      window.location.href = '/api/auth/linkedin';
     } finally {
       setIsLoading(false);
     }
@@ -46,4 +56,3 @@ export default function LoginButton({ className = '', text = 'Entrar com LinkedI
     </button>
   );
 }
-
