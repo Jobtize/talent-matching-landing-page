@@ -133,16 +133,29 @@ export const {
       // Garantir que o redirecionamento para /profile funcione corretamente
       console.log("Redirecionamento:", { url, baseUrl });
       
-      // Se a URL for relativa (/profile), adicione o baseUrl
+      // Verificar se há uma URL de callback armazenada no sessionStorage
+      // Isso é feito no cliente, então não podemos acessar aqui diretamente
+      
+      // Priorizar redirecionamento para /profile
+      if (url.includes('/profile') || url.endsWith('/profile')) {
+        console.log("Redirecionando para perfil:", `${baseUrl}/profile`);
+        return `${baseUrl}/profile`;
+      }
+      
+      // Se a URL for relativa, adicione o baseUrl
       if (url.startsWith('/')) {
+        console.log("Redirecionando para URL relativa:", `${baseUrl}${url}`);
         return `${baseUrl}${url}`;
       }
       // Se a URL já for absoluta, retorne-a diretamente
       else if (url.startsWith('http')) {
+        console.log("Redirecionando para URL absoluta:", url);
         return url;
       }
-      // Caso contrário, redirecione para a página inicial
-      return baseUrl;
+      
+      // Caso contrário, redirecione para a página de perfil por padrão
+      console.log("Redirecionando para perfil (padrão):", `${baseUrl}/profile`);
+      return `${baseUrl}/profile`;
     },
   },
   pages: {
