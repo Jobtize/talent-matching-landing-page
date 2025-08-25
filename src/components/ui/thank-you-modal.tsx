@@ -68,7 +68,7 @@ export function ThankYouModal({
 
   // Função removida: handleCompleteRegistration
 
-  const handleLinkedInLogin = () => {
+  const handleLinkedInLogin = async () => {
     // Tracking do clique em login com LinkedIn
     track('linkedin_login_click', {
       source: 'thank_you_modal'
@@ -79,9 +79,15 @@ export function ThankYouModal({
       source: 'thank_you_modal'
     })
     
-    // Redirecionar para a autenticação do LinkedIn
-    // Usar window.location.href em vez de router.push para redirecionamento de API
-    window.location.href = '/api/auth/linkedin'
+    try {
+      // Usar signIn do NextAuth em vez de redirecionamento direto
+      const { signIn } = await import('next-auth/react')
+      await signIn('linkedin', { callbackUrl: '/profile' })
+    } catch (error) {
+      console.error('Erro ao fazer login com LinkedIn:', error)
+      // Fallback para redirecionamento direto em caso de erro
+      window.location.href = '/api/auth/linkedin'
+    }
   }
 
   const handleBackdropClick = (e: React.MouseEvent) => {

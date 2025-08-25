@@ -25,10 +25,10 @@ export async function middleware(request: NextRequest) {
   const session = await auth();
   
   // Se não estiver autenticado e for uma rota protegida, redirecionar para a página inicial
+  // sem adicionar parâmetros de consulta
   if (!session && isProtectedRoute) {
-    const url = new URL('/', request.url);
-    url.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(url);
+    // Redirecionar diretamente para a página inicial sem parâmetros de consulta
+    return NextResponse.redirect(new URL('/', request.url));
   }
   
   // Permitir acesso se estiver autenticado

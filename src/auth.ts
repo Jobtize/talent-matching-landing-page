@@ -130,6 +130,7 @@ export const {
   },
   pages: {
     signIn: "/",
+    signOut: "/",
     error: "/auth/error",
   },
   session: {
