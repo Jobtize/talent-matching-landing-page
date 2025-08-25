@@ -39,12 +39,11 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Corresponde a todas as rotas, exceto:
-     * 1. Rotas de API (que começam com /api/)
-     * 2. Arquivos estáticos (que começam com /_next/ ou contêm um ponto como .jpg, .png, etc.)
-     * 3. Rotas de autenticação (que começam com /api/auth/)
+     * Corresponde apenas às rotas protegidas:
+     * 1. /profile e suas sub-rotas
+     * 2. /dashboard e suas sub-rotas
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.).*)',
+    '/profile/:path*',
+    '/dashboard/:path*',
   ],
 };
-
