@@ -41,34 +41,37 @@ export async function GET(request: NextRequest) {
     
     const profileData = await profileResponse.json();
     
-    // Buscar dados de conexões se tivermos o ID da pessoa
+    // Buscar dados de conexões usando a API r_1st_connections_size
     let connectionsData = null;
-    if (profileData.sub) {
-      try {
-        const connectionsResponse = await fetch(
-          `https://api.linkedin.com/v2/connections/urn:li:person:${profileData.sub}`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.user.accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        
-        if (connectionsResponse.ok) {
-          connectionsData = await connectionsResponse.json();
-        } else {
-          console.error('Erro ao buscar conexões do LinkedIn:', await connectionsResponse.text());
+    try {
+      const connectionsResponse = await fetch(
+        'https://api.linkedin.com/v2/connections?q=viewer',
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.accessToken}`,
+            'Content-Type': 'application/json',
+          },
         }
-      } catch (error) {
-        console.error('Erro ao buscar conexões do LinkedIn:', error);
+      );
+      
+      if (connectionsResponse.ok) {
+        connectionsData = await connectionsResponse.json();
+        console.log('Dados de conexões do LinkedIn:', JSON.stringify(connectionsData, null, 2));
+      } else {
+        console.error('Erro ao buscar conexões do LinkedIn:', await connectionsResponse.text());
       }
+    } catch (error) {
+      console.error('Erro ao buscar conexões do LinkedIn:', error);
     }
     
     // Combinar os dados do perfil e conexões
     const combinedData = {
       ...profileData,
-      connections: connectionsData?.connections?.total || 0,
+      connections: 
+        connectionsData?.connections?.total || 
+        connectionsData?.firstDegreeSize || 
+        connectionsData?.count || 
+        0,
     };
     
     return NextResponse.json(combinedData);
@@ -80,4 +83,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

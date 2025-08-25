@@ -14,7 +14,7 @@ export const {
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
       authorization: {
         params: { 
-          scope: "openid profile email r_liteprofile r_emailaddress r_network" 
+          scope: "openid profile email r_1st_connections_size r_basicprofile" 
         },
       },
       userinfo: {
@@ -63,27 +63,31 @@ export const {
               token.industry = userInfo.industry || '';
               token.profileUrl = userInfo.profileUrl || '';
               
-              // Buscar conexões se tivermos o ID da pessoa
-              if (userInfo.sub) {
-                try {
-                  const connectionsResponse = await fetch(
-                    `https://api.linkedin.com/v2/connections/urn:li:person:${userInfo.sub}`, {
-                      headers: {
-                        Authorization: `Bearer ${account.access_token}`,
-                      },
-                    }
-                  );
-                  
-                  if (connectionsResponse.ok) {
-                    const connectionsData = await connectionsResponse.json();
-                    console.log("LinkedIn connections API response:", JSON.stringify(connectionsData, null, 2));
-                    token.connections = connectionsData.connections?.total || 0;
-                  } else {
-                    console.error("Erro ao buscar conexões do LinkedIn:", await connectionsResponse.text());
+              // Buscar conexões usando a API r_1st_connections_size
+              try {
+                const connectionsResponse = await fetch(
+                  'https://api.linkedin.com/v2/connections?q=viewer', {
+                    headers: {
+                      Authorization: `Bearer ${account.access_token}`,
+                    },
                   }
-                } catch (error) {
-                  console.error("Erro ao buscar conexões do LinkedIn:", error);
+                );
+                
+                if (connectionsResponse.ok) {
+                  const connectionsData = await connectionsResponse.json();
+                  console.log("LinkedIn connections API response:", JSON.stringify(connectionsData, null, 2));
+                  // A API retorna o número de conexões em um formato diferente dependendo da versão
+                  // Tentamos extrair de várias maneiras possíveis
+                  token.connections = 
+                    connectionsData.connections?.total || 
+                    connectionsData.firstDegreeSize || 
+                    connectionsData.count || 
+                    0;
+                } else {
+                  console.error("Erro ao buscar conexões do LinkedIn:", await connectionsResponse.text());
                 }
+              } catch (error) {
+                console.error("Erro ao buscar conexões do LinkedIn:", error);
               }
             } else {
               console.error("Erro ao buscar dados do usuário do LinkedIn:", await userInfoResponse.text());
