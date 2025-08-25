@@ -92,7 +92,8 @@ export async function GET(request: NextRequest) {
     const { token /* JWT da sua API */, user: savedUser } = await createUserRes.json();
 
     // 6) Resposta: set cookie httpOnly + limpeza de state + redirect
-    const res = NextResponse.redirect(`${SITE_URL}/profile`, { status: 302 });
+    // Usar o caminho absoluto para o redirecionamento
+    const res = NextResponse.redirect(new URL('/profile', SITE_URL).toString(), { status: 302 });
     // Cookie de sessão (JWT ou session-id)
     res.cookies.set({
       name: 'auth_token',

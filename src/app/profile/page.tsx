@@ -86,6 +86,11 @@ export default function ProfilePage() {
   
   // Verificar se o usuário está autenticado
   if (status === 'unauthenticated') {
+    // Redirecionar para a página inicial se não estiver autenticado
+    useEffect(() => {
+      window.location.href = '/';
+    }, []);
+    
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <p className="text-gray-600">Redirecionando para a página inicial...</p>
