@@ -9,6 +9,7 @@ export const {
   signOut,
 } = NextAuth({
   trustHost: true,
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     LinkedIn({
       clientId: process.env.LINKEDIN_CLIENT_ID!,
@@ -22,6 +23,7 @@ export const {
       userinfo: {
         url: "https://api.linkedin.com/v2/userinfo",
       },
+      allowDangerousEmailAccountLinking: true,
       profile(profile) {
         console.log("LinkedIn profile data:", JSON.stringify(profile, null, 2));
         return {
@@ -161,6 +163,16 @@ export const {
         path: "/",
         secure: process.env.NODE_ENV === "production",
         maxAge: 60 * 10, // 10 minutos
+      },
+    },
+    state: {
+      name: "next-auth.state",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 15, // 15 minutos
       },
     },
   },
