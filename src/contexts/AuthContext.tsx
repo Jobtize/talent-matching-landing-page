@@ -130,19 +130,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
       .then(() => {
         console.log('Logout realizado com sucesso no servidor')
-        // Redirecionar para a página inicial
-        window.location.href = '/'
+        // Redirecionar para a página inicial usando router
+        router.push('/')
       })
       .catch(error => {
         console.error('Erro ao fazer logout no servidor:', error)
         // Mesmo com erro, redirecionar para a página inicial
-        window.location.href = '/'
+        router.push('/')
       })
     } else {
       // Fallback para o caso de não conseguir chamar a API
-      if (typeof window !== 'undefined') {
-        window.location.href = '/'
-      }
+      router.push('/')
     }
   }
 

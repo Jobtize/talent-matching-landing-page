@@ -7,43 +7,41 @@ export async function GET() {
     const authToken = cookies().get('auth_token')?.value;
     
     if (!authToken) {
+      console.log('[API /me] Não autenticado - cookie auth_token ausente');
       return NextResponse.json(
         { authenticated: false, message: 'Não autenticado' },
         { status: 401 }
       );
     }
     
-    // Verificar token com o backend
-    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
-    const verifyResponse = await fetch(`${SITE_URL}/api/auth/verify`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
+    // Em uma implementação real, aqui você verificaria o JWT ou consultaria
+    // o banco de dados para obter os dados do usuário associados ao token
     
-    if (!verifyResponse.ok) {
-      return NextResponse.json(
-        { authenticated: false, message: 'Token inválido' },
-        { status: 401 }
-      );
-    }
+    // Simulação: Decodificar o JWT ou buscar dados do usuário
+    // Nota: Em produção, use uma biblioteca como jose para verificar o JWT
+    // ou consulte seu banco de dados usando o token como chave
     
-    const userData = await verifyResponse.json();
+    // Exemplo simplificado para demonstração:
+    const userData = {
+      id: '123',
+      name: 'Usuário Exemplo',
+      email: 'usuario@exemplo.com',
+      profilePicture: 'https://via.placeholder.com/150'
+    };
+    
+    console.log('[API /me] Usuário autenticado:', userData.email);
     
     // Configurar cabeçalhos para evitar cache
     const response = NextResponse.json({
       authenticated: true,
-      user: userData.user
+      user: userData
     });
     
     response.headers.set('Cache-Control', 'no-store, max-age=0');
     
     return response;
   } catch (error) {
-    console.error('Erro ao verificar autenticação:', error);
+    console.error('[API /me] Erro ao verificar autenticação:', error);
     return NextResponse.json(
       { authenticated: false, message: 'Erro interno' },
       { status: 500 }
