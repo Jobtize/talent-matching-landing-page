@@ -110,6 +110,7 @@ export const {
         token.profileUrl = profile.profileUrl || token.profileUrl;
       }
       
+      console.log("JWT token gerado:", JSON.stringify(token, null, 2));
       return token;
     },
     async session({ session, token }) {
@@ -125,7 +126,23 @@ export const {
         session.user.connections = token.connections as number;
       }
       
+      console.log("Sessão gerada:", JSON.stringify(session, null, 2));
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Garantir que o redirecionamento para /profile funcione corretamente
+      console.log("Redirecionamento:", { url, baseUrl });
+      
+      // Se a URL for relativa (/profile), adicione o baseUrl
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      // Se a URL já for absoluta, retorne-a diretamente
+      else if (url.startsWith('http')) {
+        return url;
+      }
+      // Caso contrário, redirecione para a página inicial
+      return baseUrl;
     },
   },
   pages: {
