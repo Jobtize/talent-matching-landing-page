@@ -498,7 +498,8 @@ export default function JobtizeLanding() {
                     source: 'landing_page'
                   })
                   
-                  router.push('/api/auth/linkedin')
+                  // Usar window.location.href em vez de router.push para rotas de API
+                  window.location.href = '/api/auth/linkedin'
                 }}
                 className="flex items-center gap-2 bg-[#0077B5] hover:bg-[#006097] text-white px-4 py-2 rounded-md font-medium text-sm"
               >
