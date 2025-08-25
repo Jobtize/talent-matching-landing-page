@@ -80,7 +80,8 @@ export function ThankYouModal({
     })
     
     // Redirecionar para a autenticação do LinkedIn
-    router.push('/api/auth/linkedin')
+    // Usar window.location.href em vez de router.push para redirecionamento de API
+    window.location.href = '/api/auth/linkedin'
   }
 
   const handleBackdropClick = (e: React.MouseEvent) => {

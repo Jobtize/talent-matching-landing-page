@@ -9,7 +9,7 @@ export const {
   signOut,
 } = NextAuth({
   trustHost: true,
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'your-nextauth-secret-key-here',
   providers: [
     LinkedIn({
       clientId: process.env.LINKEDIN_CLIENT_ID!,
