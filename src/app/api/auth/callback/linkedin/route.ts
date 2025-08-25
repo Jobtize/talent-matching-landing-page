@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { cookies } from 'next/headers';
 
 // Função auxiliar para criar uma resposta de redirecionamento
 function createProfileRedirect() {
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
   console.log("Criando redirecionamento direto para /profile");
   return NextResponse.redirect(`${baseUrl}/profile`, { status: 302 });
+}
+
+// Função para verificar se o usuário está autenticado
+async function isAuthenticated() {
+  try {
+    const session = await auth();
+    return !!session;
+  } catch (error) {
+    console.error("Erro ao verificar autenticação:", error);
+    return false;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -24,10 +36,22 @@ export async function GET(request: NextRequest) {
       console.log("Código de autorização recebido do LinkedIn:", code.substring(0, 10) + "...");
       
       try {
+        console.log("Processando autenticação com NextAuth...");
+        
         // Tentar processar a autenticação com NextAuth
         const response = await auth.handleAuth(request as any, { providerId: 'linkedin' });
         
-        console.log("Autenticação processada com sucesso, redirecionando...");
+        console.log("Autenticação processada com sucesso, verificando status...");
+        
+        // Verificar se o usuário está autenticado após o processamento
+        const authenticated = await isAuthenticated();
+        console.log("Status de autenticação após processamento:", authenticated);
+        
+        // Se o usuário estiver autenticado, redirecionar para /profile
+        if (authenticated) {
+          console.log("Usuário autenticado, redirecionando para /profile");
+          return createProfileRedirect();
+        }
         
         // Verificar se a resposta é um redirecionamento
         if (response instanceof Response && response.status >= 300 && response.status < 400) {
@@ -47,6 +71,8 @@ export async function GET(request: NextRequest) {
           return createProfileRedirect();
         }
         
+        // Se chegamos aqui, retornar a resposta original
+        console.log("Retornando resposta original do NextAuth");
         return response;
       } catch (authError: any) {
         console.error("Erro ao processar autenticação:", authError);

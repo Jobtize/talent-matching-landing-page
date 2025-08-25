@@ -42,11 +42,33 @@ export const {
     }),
   ],
   callbacks: {
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account, profile, user }) {
       // Adicionar dados adicionais ao token JWT
+      console.log("JWT callback chamado com:", { 
+        tokenSub: token.sub, 
+        hasAccount: !!account, 
+        hasProfile: !!profile,
+        hasUser: !!user
+      });
+      
+      // Se tivermos um usuário, adicione-o ao token
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
+      }
+      
       if (account) {
+        console.log("Conta do provedor recebida:", {
+          provider: account.provider,
+          type: account.type,
+          hasAccessToken: !!account.access_token
+        });
+        
         token.accessToken = account.access_token;
         token.expiresAt = account.expires_at;
+        token.provider = account.provider;
         
         // Buscar informações adicionais do LinkedIn se tivermos um token de acesso
         if (account.access_token) {
@@ -103,6 +125,12 @@ export const {
       }
       
       if (profile) {
+        console.log("Perfil do provedor recebido:", {
+          sub: profile.sub,
+          name: profile.name,
+          email: profile.email
+        });
+        
         token.firstName = profile.given_name;
         token.lastName = profile.family_name;
         token.headline = profile.headline || token.headline;
@@ -115,15 +143,33 @@ export const {
     },
     async session({ session, token }) {
       // Adicionar dados adicionais à sessão
+      console.log("Session callback chamado com:", { 
+        hasSession: !!session, 
+        hasUser: !!session?.user,
+        tokenSub: token.sub
+      });
+      
       if (session.user) {
         session.user.id = token.sub as string;
-        session.user.firstName = token.firstName as string;
-        session.user.lastName = token.lastName as string;
-        session.user.accessToken = token.accessToken as string;
-        session.user.headline = token.headline as string;
-        session.user.industry = token.industry as string;
-        session.user.profileUrl = token.profileUrl as string;
-        session.user.connections = token.connections as number;
+        session.user.firstName = token.firstName as string || '';
+        session.user.lastName = token.lastName as string || '';
+        session.user.accessToken = token.accessToken as string || '';
+        session.user.headline = token.headline as string || '';
+        session.user.industry = token.industry as string || '';
+        session.user.profileUrl = token.profileUrl as string || '';
+        session.user.connections = token.connections as number || 0;
+        
+        // Garantir que temos pelo menos o email e o nome
+        if (!session.user.email && token.email) {
+          session.user.email = token.email as string;
+        }
+        
+        if (!session.user.name && token.name) {
+          session.user.name = token.name as string;
+        }
+        
+        // Adicionar o provider para referência
+        session.user.provider = token.provider as string || 'linkedin';
       }
       
       console.log("Sessão gerada:", JSON.stringify(session, null, 2));
@@ -174,7 +220,9 @@ export const {
   session: {
     strategy: "jwt",
     maxAge: 60 * 60 * 24 * 7, // 7 dias
+    updateAge: 60 * 60, // 1 hora
   },
+  debug: process.env.NODE_ENV === "development",
   cookies: {
     sessionToken: {
       name: "next-auth.session-token",
