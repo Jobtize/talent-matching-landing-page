@@ -32,6 +32,20 @@ export async function GET(request: NextRequest) {
       url: request.nextUrl.toString()
     });
     
+    // Extrair callbackUrl do state, se disponível
+    let callbackUrl = '/profile';
+    if (state) {
+      try {
+        const stateData = JSON.parse(decodeURIComponent(state));
+        if (stateData.callbackUrl) {
+          callbackUrl = stateData.callbackUrl;
+          console.log("CallbackUrl extraído do state:", callbackUrl);
+        }
+      } catch (e) {
+        console.error("Erro ao parsear state:", e);
+      }
+    }
+    
     if (code) {
       console.log("Código de autorização recebido do LinkedIn:", code.substring(0, 10) + "...");
       
@@ -47,10 +61,11 @@ export async function GET(request: NextRequest) {
         const authenticated = await isAuthenticated();
         console.log("Status de autenticação após processamento:", authenticated);
         
-        // Se o usuário estiver autenticado, redirecionar para /profile
+        // Se o usuário estiver autenticado, redirecionar para o callbackUrl
         if (authenticated) {
-          console.log("Usuário autenticado, redirecionando para /profile");
-          return createProfileRedirect();
+          console.log(`Usuário autenticado, redirecionando para: ${callbackUrl}`);
+          const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
+          return NextResponse.redirect(`${baseUrl}${callbackUrl.startsWith('/') ? callbackUrl : `/${callbackUrl}`}`, { status: 302 });
         }
         
         // Verificar se a resposta é um redirecionamento
@@ -58,17 +73,19 @@ export async function GET(request: NextRequest) {
           const redirectUrl = response.headers.get('location');
           console.log("Redirecionamento detectado para:", redirectUrl);
           
-          // Se o redirecionamento não for para /profile, forçar redirecionamento para /profile
-          if (redirectUrl && !redirectUrl.includes('/profile')) {
-            console.log("Forçando redirecionamento para /profile");
-            return createProfileRedirect();
+          // Se o redirecionamento não for para o callbackUrl, forçar redirecionamento
+          if (redirectUrl && !redirectUrl.includes(callbackUrl)) {
+            console.log(`Forçando redirecionamento para: ${callbackUrl}`);
+            const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
+            return NextResponse.redirect(`${baseUrl}${callbackUrl.startsWith('/') ? callbackUrl : `/${callbackUrl}`}`, { status: 302 });
           }
         }
         
-        // Se a resposta não for um redirecionamento, forçar redirecionamento para /profile
+        // Se a resposta não for um redirecionamento, forçar redirecionamento para o callbackUrl
         if (!(response instanceof Response) || response.status < 300 || response.status >= 400) {
-          console.log("Resposta não é um redirecionamento, forçando redirecionamento para /profile");
-          return createProfileRedirect();
+          console.log(`Resposta não é um redirecionamento, forçando redirecionamento para: ${callbackUrl}`);
+          const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3002';
+          return NextResponse.redirect(`${baseUrl}${callbackUrl.startsWith('/') ? callbackUrl : `/${callbackUrl}`}`, { status: 302 });
         }
         
         // Se chegamos aqui, retornar a resposta original
